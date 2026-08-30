@@ -673,6 +673,28 @@
     #photo-validation-status.bad { color: var(--error); }
     #photo-validation-status.checking { color: var(--py-yellow); }
 
+    #network-status {
+      position: fixed;
+      bottom: 132px;
+      right: 14px;
+      z-index: 40;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 7px 10px;
+      border: 1px solid var(--glass-border);
+      border-radius: 999px;
+      background: rgba(5,9,20,0.82);
+      color: var(--text-dim);
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+      display: none;
+    }
+    #network-status.visible { display: block; }
+    #network-status.net-good { border-color: var(--success); color: var(--success); }
+    #network-status.net-warn { border-color: var(--py-yellow); color: var(--py-yellow); }
+    #network-status.net-bad { border-color: var(--error); color: var(--error); }
+
     #attention-toast {
       position: fixed;
       top: 16px;
@@ -748,7 +770,7 @@
      the exam actually starts and the camera has been initialized. -->
 <video id="monitor-video" autoplay playsinline muted></video>
 <canvas id="monitor-canvas" style="display:none;"></canvas>
-<div id="monitor-status"></div>
+<div id="monitor-status"></div><div id="network-status" aria-live="polite"></div>
 <div id="attention-toast"></div>
 <div id="face-blackout" aria-live="assertive" aria-hidden="true">
   <div class="face-blackout-panel">
@@ -1060,7 +1082,13 @@
   const CAMERA_REQUIRED = true;
   const PHOTO_REQUIRES_EXACTLY_ONE_FACE = true;
   const BLACKOUT_ON_FACE_LOSS = true;
-  const BLACKOUT_ON_LOOK_AWAY = true;                 // admin-configurable: true blocks exam start without a working camera
+  const BLACKOUT_ON_LOOK_AWAY = true;
+  const PAUSE_ON_CAMERA_PROBLEM = true;
+  const PAUSE_ON_NETWORK_OFFLINE = true;
+  const NETWORK_CHECK_INTERVAL_MS = 15000;
+  const NETWORK_SLOW_THRESHOLD_MBPS = 1;
+  const NETWORK_GOOD_THRESHOLD_MBPS = 5;
+  const NETWORK_TEST_BYTES = 131072;                 // admin-configurable: true blocks exam start without a working camera
   const FACE_CHECK_INTERVAL_MS = 700;            // how often a frame is analyzed
   const FACE_MISSING_WARNING_SECONDS = 1;        // no face detected, sustained for 1 second
   const MULTIPLE_FACES_WARNING_SECONDS = 2;      // more than one face detected, sustained
@@ -1081,6 +1109,13 @@
   let lookAwaySinceMs = null;
   let attentionWarningCount = 0;
   let lastAttentionToastTime = 0;
+  let examPaused = false;
+  let pauseReason = "";
+  let networkCheckInterval = null;
+  let networkListenersAttached = false;
+  let lastNetworkClass = null;
+  let lastNetworkEventAt = 0;
+  const shuffledOptionsByQuestion = {};
 
   /* ================= Developer / test mode config (CHANGE 7) =================
      Ctrl+Shift+D prompts for the developer code, which is verified on the
@@ -1335,6 +1370,160 @@
     }
   }
 
+  /* ================= Network monitoring ================= */
+  function updateNetworkStatus(kind, text) {
+    const el = document.getElementById('network-status');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('visible');
+    el.classList.remove('net-good', 'net-warn', 'net-bad');
+    if (kind) el.classList.add(kind);
+  }
+
+  function logNetworkEvent(type, details) {
+    const now = Date.now();
+    if (type === lastNetworkClass && now - lastNetworkEventAt < 10000) return;
+    lastNetworkClass = type;
+    lastNetworkEventAt = now;
+    if (!examSecurityActive) return;
+    google.script.run.logSecurityEvent({
+      studentId: studentData.mobile || studentData.name,
+      testId: EXAM_TEST_ID,
+      eventType: type,
+      questionNumber: (questions[currentIndex] && questions[currentIndex].qNum) || "",
+      details: details || ""
+    });
+  }
+
+  async function measureInternetSpeedMbps() {
+    if (!navigator.onLine) return 0;
+    if (navigator.connection && typeof navigator.connection.downlink === 'number' && navigator.connection.downlink > 0) {
+      return navigator.connection.downlink;
+    }
+
+    const url = FRONTEND_API_URL + '?speed=1&bytes=' + NETWORK_TEST_BYTES + '&_=' + Date.now();
+    const start = performance.now();
+    const response = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if (!response.ok) throw new Error('Speed test HTTP ' + response.status);
+    const buffer = await response.arrayBuffer();
+    const seconds = Math.max(0.05, (performance.now() - start) / 1000);
+    return (buffer.byteLength * 8) / seconds / 1000000;
+  }
+
+  function handleNetworkState(online, speedMbps) {
+    if (!online) {
+      updateNetworkStatus('net-bad', '🔴 Internet offline');
+      logNetworkEvent('NETWORK_OFFLINE', 'Browser reports offline.');
+      if (PAUSE_ON_NETWORK_OFFLINE && examSecurityActive && !examPaused && !developerMode) {
+        pauseExamForProtection('NETWORK_OFFLINE', 'Internet connection lost. The exam is paused.');
+      }
+      return;
+    }
+
+    if (typeof speedMbps === 'number' && isFinite(speedMbps)) {
+      if (speedMbps >= NETWORK_GOOD_THRESHOLD_MBPS) {
+        updateNetworkStatus('net-good', '🟢 Internet ' + speedMbps.toFixed(1) + ' Mbps');
+        logNetworkEvent('NETWORK_GOOD', speedMbps.toFixed(1) + ' Mbps');
+      } else if (speedMbps >= NETWORK_SLOW_THRESHOLD_MBPS) {
+        updateNetworkStatus('net-warn', '🟡 Internet ' + speedMbps.toFixed(1) + ' Mbps');
+        logNetworkEvent('NETWORK_SLOW', speedMbps.toFixed(1) + ' Mbps');
+      } else {
+        updateNetworkStatus('net-bad', '🔴 Internet ' + speedMbps.toFixed(1) + ' Mbps');
+        logNetworkEvent('NETWORK_SLOW', speedMbps.toFixed(1) + ' Mbps');
+      }
+    }
+  }
+
+  async function checkNetworkNow() {
+    if (!navigator.onLine) {
+      handleNetworkState(false, 0);
+      return;
+    }
+    try {
+      const speed = await measureInternetSpeedMbps();
+      handleNetworkState(true, speed);
+      if (examPaused && pauseReason === 'NETWORK_OFFLINE' && navigator.onLine && !developerMode) {
+        resumeExamFromProtection('NETWORK_ONLINE', 'Internet connection restored.');
+      }
+    } catch (err) {
+      updateNetworkStatus('net-warn', '🟡 Internet check failed');
+      logNetworkEvent('NETWORK_CHECK_FAILED', err.toString());
+    }
+  }
+
+  function startNetworkMonitoring() {
+    if (networkCheckInterval) clearInterval(networkCheckInterval);
+    if (!networkListenersAttached) {
+      window.addEventListener('online', function() {
+        checkNetworkNow();
+        if (examPaused && pauseReason === 'NETWORK_OFFLINE' && !developerMode) {
+          resumeExamFromProtection('NETWORK_ONLINE', 'Internet connection restored.');
+        }
+      });
+      window.addEventListener('offline', function() { handleNetworkState(false, 0); });
+      networkListenersAttached = true;
+    }
+    checkNetworkNow();
+    networkCheckInterval = setInterval(checkNetworkNow, NETWORK_CHECK_INTERVAL_MS);
+  }
+
+  /* ================= Server-aware exam pause protection ================= */
+  function pauseExamForProtection(eventType, message) {
+    if (developerMode || examPaused || !examSecurityActive) return;
+    examPaused = true;
+    pauseReason = eventType || 'PROTECTION';
+    stopTimer();
+    setFaceBlackout(
+      true,
+      eventType === 'NETWORK_OFFLINE' ? 'Internet connection lost' : 'Exam paused',
+      message || 'The exam is paused. Correct the issue to continue.'
+    );
+
+    if (examSessionId) {
+      google.script.run
+        .withFailureHandler(function(err) { console.warn('Pause request failed:', err); })
+        .pauseExamSession(examSessionId, message || eventType);
+    }
+  }
+
+  function resumeExamFromProtection(eventType, message) {
+    if (!examPaused) return;
+
+    if (!examSessionId) {
+      examPaused = false;
+      pauseReason = "";
+      setFaceBlackout(false);
+      startTimer();
+      return;
+    }
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        if (!result || result.status !== 'SUCCESS') {
+          showAttentionToast('Exam is still paused.');
+          return;
+        }
+        examPaused = false;
+        pauseReason = "";
+        setFaceBlackout(false);
+        startTimer();
+        showAttentionToast('Exam resumed');
+        logNetworkEvent(eventType || 'EXAM_RESUMED', message || '');
+      })
+      .withFailureHandler(function(err) {
+        console.warn('Resume request failed:', err);
+        showAttentionToast('Exam is still paused. Reconnecting...');
+      })
+      .resumeExamSession(examSessionId, message || eventType);
+  }
+
+  function stopTimer() {
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  }
+
   function requestExamFullscreen() {
     if (developerMode) return; // dev testing shouldn't be forced into fullscreen repeatedly
     const el = document.documentElement;
@@ -1505,6 +1694,15 @@ function startCameraMonitoring() {
       videoEl.classList.add('visible');
       cameraMonitoringActive = true;
       updateMonitorStatus('ok', '🟢 Attention OK');
+
+      stream.getVideoTracks().forEach(function(track) {
+        track.addEventListener('ended', function() {
+          logSecurityEventToServer('CAMERA_DISCONNECTED', 'Camera track ended during the exam.');
+          if (PAUSE_ON_CAMERA_PROBLEM && examSecurityActive && !developerMode) {
+            pauseExamForProtection('CAMERA_DISCONNECTED', 'The camera was disconnected or stopped.');
+          }
+        });
+      });
 
       loadFaceApiModelsIfNeeded().then(function (loaded) {
         if (!loaded) {
@@ -1678,11 +1876,18 @@ function startCameraMonitoring() {
                 'Please face the screen',
                 'The exam is temporarily hidden because your face appears turned away. Look back at the screen to continue.'
               );
+              if (PAUSE_ON_CAMERA_PROBLEM) {
+                pauseExamForProtection('LOOKING_AWAY', 'Your face appears turned away from the screen.');
+              }
               recordAttentionEvent('LOOKING_AWAY', 'Head/gaze appears turned away from the screen.', awaySec.toFixed(1));
             }
           } else {
             lookAwaySinceMs = null;
-            setFaceBlackout(false);
+            if (examPaused && (pauseReason === 'FACE_MISSING' || pauseReason === 'MULTIPLE_FACES' || pauseReason === 'LOOKING_AWAY')) {
+              resumeExamFromProtection('FACE_OK', 'Face/attention returned to acceptable position.');
+            } else {
+              setFaceBlackout(false);
+            }
             updateMonitorStatus('ok', '🟢 Attention OK');
           }
         }
@@ -1912,9 +2117,12 @@ function startCameraMonitoring() {
   }
 
   function onExamSessionStarted(session) {
-    if (session && session.status === 'SUCCESS') {
-      examSessionId = session.sessionId;
+    if (!session || session.status !== 'SUCCESS' || !session.sessionId) {
+      onFailure(new Error((session && session.message) || 'Could not start exam session.'));
+      return;
     }
+
+    examSessionId = session.sessionId;
 
     const fileInput = document.getElementById('student-image');
     const file = fileInput.files[0];
@@ -1924,7 +2132,7 @@ function startCameraMonitoring() {
       google.script.run
         .withSuccessHandler(onQuestionsLoaded)
         .withFailureHandler(onFailure)
-        .getQuestions();
+        .getQuestions(examSessionId);
     };
     reader.readAsDataURL(file);
   }
@@ -1940,12 +2148,14 @@ function startCameraMonitoring() {
       return;
     }
     questions = data;
+    Object.keys(shuffledOptionsByQuestion).forEach(function(k) { delete shuffledOptionsByQuestion[k]; });
     currentIndex = 0;
     examStartTime = Date.now();
     showStep('step-exam');
     renderQuestion();
     buildPalette();
     activateExamSecurity();
+    startNetworkMonitoring();
     if (examDurationMinutes > 0) {
       timeRemainingSeconds = examDurationMinutes * 60;
       startTimer();
@@ -1956,12 +2166,15 @@ function startCameraMonitoring() {
 
   /* ================= Timer ================= */
   function startTimer() {
+    if (timerInterval || examPaused) return;
     updateTimerDisplay();
     timerInterval = setInterval(() => {
+      if (examPaused) return;
       timeRemainingSeconds--;
       updateTimerDisplay();
       if (timeRemainingSeconds <= 0) {
         clearInterval(timerInterval);
+        timerInterval = null;
         recordSecurityEvent('TIME_EXPIRED', 'Client-side countdown reached zero.', false);
         alert("Time is up! Your test will be submitted automatically.");
         forceSubmit();
@@ -2002,7 +2215,7 @@ function startCameraMonitoring() {
       };
       container.appendChild(textarea);
     } else {
-      const options = parseOptions(q.optionsType);
+      const options = getShuffledOptions(q);
       options.forEach(optStr => {
         const item = document.createElement('label');
         item.className = 'option-item';
@@ -2052,6 +2265,19 @@ function startCameraMonitoring() {
   function parseOptions(optionsTypeStr) {
     if (!optionsTypeStr) return [];
     return optionsTypeStr.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function getShuffledOptions(q) {
+    if (!q || q.optionsType.trim() === "Theory question") return [];
+    if (shuffledOptionsByQuestion[q.qNum]) return shuffledOptionsByQuestion[q.qNum].slice();
+
+    const options = parseOptions(q.optionsType);
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = options[i]; options[i] = options[j]; options[j] = t;
+    }
+    shuffledOptionsByQuestion[q.qNum] = options.slice();
+    return options;
   }
 
   function updateProgress() {
