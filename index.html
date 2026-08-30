@@ -2195,9 +2195,13 @@ function startCameraMonitoring() {
     document.getElementById('exam-error').style.display = 'none';
     const q = questions[currentIndex];
 
+    const displayQuestionNumber = currentIndex + 1;
+
     document.getElementById('q-meta').innerHTML =
-      `<span>Section ${q.section} · ${q.topic}</span><span>Q ${currentIndex + 1} / ${questions.length}</span>`;
-    document.getElementById('q-title').innerText = `${q.qNum}: ${q.questionText}`;
+      `<span>Section ${q.section} · ${q.topic}</span><span>Q ${displayQuestionNumber} / ${questions.length}</span>`;
+    // q.qNum remains the internal question ID used for grading/saving answers.
+    // Students always see sequential numbering: Q1, Q2, Q3, ...
+    document.getElementById('q-title').innerText = `Q${displayQuestionNumber}: ${q.questionText}`;
 
     const container = document.getElementById('q-container');
     container.innerHTML = "";
