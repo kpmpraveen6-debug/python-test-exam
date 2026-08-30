@@ -627,6 +627,52 @@
     #monitor-status.status-warn { border-color: var(--py-yellow); color: var(--py-yellow); }
     #monitor-status.status-bad { border-color: var(--error); color: var(--error); }
 
+    #face-blackout {
+      position: fixed;
+      inset: 0;
+      z-index: 100000;
+      display: none;
+      background: #000;
+      color: #fff;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    #face-blackout.visible { display: flex; }
+    .face-blackout-panel {
+      width: min(92vw, 460px);
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 16px;
+      background: #050505;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.75);
+      font-family: var(--font-body);
+    }
+    .face-blackout-icon { font-size: 2.2rem; margin-bottom: 10px; }
+    #face-blackout-title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    #face-blackout-message {
+      color: #c8c8c8;
+      line-height: 1.55;
+      font-size: 0.95rem;
+    }
+    #photo-validation-status {
+      margin-top: 8px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.4;
+      display: none;
+    }
+    #photo-validation-status.visible { display: block; }
+    #photo-validation-status.ok { color: var(--success); }
+    #photo-validation-status.bad { color: var(--error); }
+    #photo-validation-status.checking { color: var(--py-yellow); }
+
     #attention-toast {
       position: fixed;
       top: 16px;
@@ -704,6 +750,13 @@
 <canvas id="monitor-canvas" style="display:none;"></canvas>
 <div id="monitor-status"></div>
 <div id="attention-toast"></div>
+<div id="face-blackout" aria-live="assertive" aria-hidden="true">
+  <div class="face-blackout-panel">
+    <div class="face-blackout-icon">⚠️</div>
+    <div id="face-blackout-title">Face not detected</div>
+    <div id="face-blackout-message">Please face the camera and look at the exam screen.</div>
+  </div>
+</div>
 
 <!-- NEW: developer/test mode indicators (CHANGE 7). Invisible to normal students. -->
 <div id="dev-mode-badge">DEV MODE</div>
@@ -745,6 +798,7 @@
           <div class="file-drop-icon">📎</div>
           <div class="file-drop-text">Click or drag an image here</div>
           <div class="file-drop-filename" id="file-drop-filename"></div>
+<div id="photo-validation-status"></div>
           <input type="file" id="student-image" accept="image/*" onchange="onFileChosen()">
         </label>
       </div>
@@ -1003,7 +1057,10 @@
      a deterrent + audit signal, exactly like the navigation checks above --
      never treat it as biometric identity verification (it isn't; it never
      stores or compares any face data, only transient in-browser detection). */
-  const CAMERA_REQUIRED = true;                 // admin-configurable: true blocks exam start without a working camera
+  const CAMERA_REQUIRED = true;
+  const PHOTO_REQUIRES_EXACTLY_ONE_FACE = true;
+  const BLACKOUT_ON_FACE_LOSS = true;
+  const BLACKOUT_ON_LOOK_AWAY = true;                 // admin-configurable: true blocks exam start without a working camera
   const FACE_CHECK_INTERVAL_MS = 700;            // how often a frame is analyzed
   const FACE_MISSING_WARNING_SECONDS = 3;        // no face detected, sustained
   const MULTIPLE_FACES_WARNING_SECONDS = 2;      // more than one face detected, sustained
@@ -1175,6 +1232,107 @@
     setTimeout(function () {
       if (lastAttentionToastTime === now) toast.classList.remove('visible');
     }, 2500);
+  }
+
+  /* ================= Student photo validation ================= */
+  function setPhotoValidationStatus(kind, message) {
+    const el = document.getElementById('photo-validation-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.classList.remove('visible', 'ok', 'bad', 'checking');
+    if (message) {
+      el.classList.add('visible');
+      if (kind) el.classList.add(kind);
+    }
+  }
+
+  function setStartButtonEnabled(enabled) {
+    const btn = document.getElementById('start-btn');
+    if (!btn) return;
+    btn.disabled = !enabled;
+    btn.style.opacity = enabled ? '1' : '0.55';
+    btn.style.cursor = enabled ? 'pointer' : 'not-allowed';
+  }
+
+  async function validateStudentPhoto(file) {
+    if (!PHOTO_REQUIRES_EXACTLY_ONE_FACE) return true;
+
+    setStartButtonEnabled(false);
+    setPhotoValidationStatus('checking', 'Checking photo — looking for exactly one human face...');
+
+    if (typeof faceapi === 'undefined') {
+      setPhotoValidationStatus('bad', 'Face detection is unavailable. Please refresh and try again.');
+      return false;
+    }
+
+    try {
+      const modelsOk = await loadFaceApiModelsIfNeeded();
+      if (!modelsOk) {
+        setPhotoValidationStatus('bad', 'Face detection could not be loaded. Please refresh and try again.');
+        return false;
+      }
+
+      const img = new Image();
+      img.decoding = 'async';
+      const objectUrl = URL.createObjectURL(file);
+
+      const result = await new Promise(function(resolve, reject) {
+        img.onload = function() {
+          URL.revokeObjectURL(objectUrl);
+          resolve(img);
+        };
+        img.onerror = function() {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error('Could not read the selected image.'));
+        };
+        img.src = objectUrl;
+      });
+
+      const options = new faceapi.TinyFaceDetectorOptions({
+        inputSize: 320,
+        scoreThreshold: 0.45
+      });
+
+      const faces = await faceapi.detectAllFaces(result, options);
+
+      if (!faces || faces.length !== 1) {
+        if (!faces || faces.length === 0) {
+          setPhotoValidationStatus('bad', 'Photo rejected: no human face detected. Please upload a clear photo of the student.');
+        } else {
+          setPhotoValidationStatus('bad', 'Photo rejected: more than one face detected. Upload a photo containing only the student.');
+        }
+        return false;
+      }
+
+      setPhotoValidationStatus('ok', '✓ Photo verified: exactly one face detected.');
+      setStartButtonEnabled(true);
+      return true;
+
+    } catch (err) {
+      console.error('PHOTO VALIDATION ERROR:', err);
+      setPhotoValidationStatus('bad', 'Could not verify the photo. Please choose a clear JPG/PNG image and try again.');
+      return false;
+    }
+  }
+
+  /* ================= Face-loss / look-away blackout ================= */
+  function setFaceBlackout(visible, title, message) {
+    if (developerMode) visible = false;
+    const overlay = document.getElementById('face-blackout');
+    const titleEl = document.getElementById('face-blackout-title');
+    const messageEl = document.getElementById('face-blackout-message');
+    if (!overlay) return;
+
+    if (visible) {
+      if (titleEl) titleEl.textContent = title || 'Attention required';
+      if (messageEl) messageEl.textContent =
+        message || 'Please face the camera and look at the exam screen.';
+      overlay.classList.add('visible');
+      overlay.setAttribute('aria-hidden', 'false');
+    } else {
+      overlay.classList.remove('visible');
+      overlay.setAttribute('aria-hidden', 'true');
+    }
   }
 
   function requestExamFullscreen() {
@@ -1448,6 +1606,11 @@ function startCameraMonitoring() {
           const missingSec = (now - faceMissingSinceMs) / 1000;
           if (missingSec >= FACE_MISSING_WARNING_SECONDS) {
             updateMonitorStatus('bad', '🔴 Face not detected');
+            setFaceBlackout(
+              BLACKOUT_ON_FACE_LOSS,
+              'Face not detected',
+              'The exam is temporarily hidden. Please face the camera and look at the screen.'
+            );
             recordAttentionEvent('FACE_MISSING', 'No face detected in frame.', missingSec.toFixed(1));
           } else {
             updateMonitorStatus('warn', '🟡 Please stay in view');
@@ -1456,6 +1619,11 @@ function startCameraMonitoring() {
         }
 
         faceMissingSinceMs = null;
+
+        // A valid single-face frame restores the page once the student is back in view.
+        if (results.length === 1 && !lookAwaySinceMs) {
+          setFaceBlackout(false);
+        }
 
         if (results.length > 1) {
           multipleFacesSinceMs = multipleFacesSinceMs || now;
@@ -1505,10 +1673,16 @@ function startCameraMonitoring() {
             const awaySec = (now - lookAwaySinceMs) / 1000;
             if (awaySec >= LOOK_AWAY_WARNING_SECONDS) {
               updateMonitorStatus('warn', '🟡 Please focus on the screen');
+              setFaceBlackout(
+                BLACKOUT_ON_LOOK_AWAY,
+                'Please face the screen',
+                'The exam is temporarily hidden because your face appears turned away. Look back at the screen to continue.'
+              );
               recordAttentionEvent('LOOKING_AWAY', 'Head/gaze appears turned away from the screen.', awaySec.toFixed(1));
             }
           } else {
             lookAwaySinceMs = null;
+            setFaceBlackout(false);
             updateMonitorStatus('ok', '🟢 Attention OK');
           }
         }
@@ -1539,16 +1713,32 @@ function startCameraMonitoring() {
   document.addEventListener('keydown', function (e) {
     if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
       e.preventDefault();
-      const code = prompt('Developer code:');
+
+      const promptText = developerMode
+        ? 'Developer mode is ON. Enter the developer code again to turn it OFF:'
+        : 'Developer code:';
+
+      const code = prompt(promptText);
       if (code === null) return;
+
       google.script.run
         .withSuccessHandler(function (result) {
           if (result && result.status === 'SUCCESS') {
-            developerMode = true;
-            developerCode = code;
-            document.getElementById('dev-mode-badge').classList.add('visible');
-            document.getElementById('dev-reveal-btn').classList.add('visible');
-            console.log('[dev mode] enabled');
+            if (developerMode) {
+              developerMode = false;
+              developerCode = null;
+              document.getElementById('dev-mode-badge').classList.remove('visible');
+              document.getElementById('dev-reveal-btn').classList.remove('visible');
+              console.log('[dev mode] disabled');
+              showAttentionToast('Developer mode OFF');
+            } else {
+              developerMode = true;
+              developerCode = code;
+              document.getElementById('dev-mode-badge').classList.add('visible');
+              document.getElementById('dev-reveal-btn').classList.add('visible');
+              console.log('[dev mode] enabled');
+              showAttentionToast('Developer mode ON');
+            }
           } else {
             alert('Invalid developer code.');
           }
@@ -1616,21 +1806,55 @@ function startCameraMonitoring() {
     showStep('step-2');
   }
 
-  function onFileChosen() {
+  async function onFileChosen() {
     const fileInput = document.getElementById('student-image');
     const drop = document.getElementById('file-drop');
     const nameEl = document.getElementById('file-drop-filename');
-    if (fileInput.files && fileInput.files.length > 0) {
-      drop.classList.add('has-file');
-      nameEl.textContent = "✓ " + fileInput.files[0].name;
-      document.getElementById('step2-error').style.display = 'none';
+    const errorEl = document.getElementById('step2-error');
+
+    setStartButtonEnabled(false);
+    setPhotoValidationStatus('', '');
+
+    if (!fileInput.files || fileInput.files.length === 0) {
+      drop.classList.remove('has-file');
+      nameEl.textContent = '';
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    const file = fileInput.files[0];
+
+    if (!/^image\/(jpeg|png|webp)$/i.test(file.type)) {
+      drop.classList.remove('has-file');
+      nameEl.textContent = '';
+      setPhotoValidationStatus('bad', 'Please upload a JPG, PNG, or WebP image.');
+      errorEl.style.display = 'block';
+      return;
+    }
+
+    drop.classList.add('has-file');
+    nameEl.textContent = "✓ " + file.name;
+    errorEl.style.display = 'none';
+
+    const valid = await validateStudentPhoto(file);
+    if (!valid) {
+      drop.classList.remove('has-file');
     }
   }
 
   function startTest() {
     const fileInput = document.getElementById('student-image');
     const errorEl = document.getElementById('step2-error');
+    const statusEl = document.getElementById('photo-validation-status');
     if (!fileInput.files || fileInput.files.length === 0) { errorEl.style.display = 'block'; return; }
+
+    if (PHOTO_REQUIRES_EXACTLY_ONE_FACE) {
+      if (!statusEl || !statusEl.classList.contains('ok')) {
+        setPhotoValidationStatus('bad', 'Please wait for the photo check to pass before starting the exam.');
+        return;
+      }
+    }
+
     errorEl.style.display = 'none';
 
     examDurationMinutes = parseInt(document.getElementById('exam-duration').value, 10);
