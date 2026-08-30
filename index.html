@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_self">
+  <meta charset="UTF-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <!-- NEW: face-api.js, used for optional webcam face-count/attention monitoring (CHANGE 3 & 4).
+       Loaded from a public CDN; if this fails to load (offline, blocked network, etc.) the
+       monitoring code below fails gracefully into "camera unavailable" behavior -- it never
+       blocks the exam unless CAMERA_REQUIRED is explicitly set to true AND the camera itself
+       (not just this library) is unavailable. -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
+  <!-- IMPORTANT: host this page as a normal HTTPS top-level page for webcam access. -->
+  <style>
+    :root {
+      --bg-deep: #0a0f1e;
+      --bg-deep-2: #10182c;
+      --glass: rgba(255,255,255,0.055);
+      --glass-border: rgba(255,255,255,0.10);
+      --glass-strong: rgba(255,255,255,0.09);
+      --py-blue: #4b8bd4;
+      --py-blue-dim: #2d5c8a;
+      --py-yellow: #ffd43b;
+      --text: #e7ecf5;
+      --text-dim: #93a0bb;
+      --success: #34d399;
+      --error: #f87171;
+      --radius: 18px;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      font-family: var(--font-body);
+      background: var(--bg-deep);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      position: relative;
+      perspective: 1600px;
+    }
+
+    /* ---------- Ambient background ---------- */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 900px 600px at 15% 10%, rgba(75,139,212,0.20), transparent 60%),
+        radial-gradient(ellipse 800px 700px at 90% 85%, rgba(255,212,59,0.10), transparent 55%),
+        linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deep-2) 100%);
+    }
+
+    .glyphs { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+    .glyph {
+      position: absolute;
+      font-family: var(--font-mono);
+      color: rgba(75,139,212,0.16);
+      font-weight: 600;
+      user-select: none;
+      animation: drift linear infinite;
+    }
+    .glyph.yellow { color: rgba(255,212,59,0.13); }
+    @keyframes drift {
+      0%   { transform: translateY(0) rotate(0deg); opacity: 0; }
+      10%  { opacity: 1; }
+      90%  { opacity: 1; }
+      100% { transform: translateY(-1100px) rotate(25deg); opacity: 0; }
+    }
+
+    /* ---------- 3D stage ---------- */
+    .stage {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 720px;
+      transform-style: preserve-3d;
+      transition: transform 0.15s ease-out;
+    }
+
+    .container {
+      position: relative;
+      width: 100%;
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow:
+        0 30px 60px -20px rgba(0,0,0,0.6),
+        0 0 0 1px rgba(255,255,255,0.02) inset,
+        0 1px 0 rgba(255,255,255,0.08) inset;
+      transform: translateZ(0);
+      animation: rise 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(28px) rotateX(6deg); }
+      to   { opacity: 1; transform: translateY(0) rotateX(0deg); }
+    }
+
+    .container::before {
+      content: "";
+      position: absolute;
+      top: -1px; left: 20px; right: 20px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--py-yellow), var(--py-blue), transparent);
+      opacity: 0.6;
+    }
+
+    /* ---------- Top chrome ---------- */
+    .chrome-dots { display: flex; gap: 7px; margin-bottom: 18px; }
+    .chrome-dots span { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .chrome-dots span:nth-child(1) { background: #f87171; }
+    .chrome-dots span:nth-child(2) { background: #fbbf24; }
+    .chrome-dots span:nth-child(3) { background: #34d399; }
+
+    .eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--py-yellow);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .eyebrow::before { content: ">"; color: var(--py-blue); }
+
+    .step-section { display: none; }
+    .step-section.active { display: block; animation: fadeSlide 0.5s cubic-bezier(0.16,1,0.3,1); }
+
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateX(18px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    h1, h2 {
+      font-family: var(--font-display);
+      margin-bottom: 10px;
+      color: #fff;
+      letter-spacing: -0.01em;
+    }
+    h1 { font-size: 1.7rem; }
+    h2 { font-size: 1.45rem; }
+
+    p.subtext { margin-bottom: 22px; color: var(--text-dim); line-height: 1.55; font-size: 0.95rem; }
+
+    .form-group { margin-bottom: 18px; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      letter-spacing: 0.02em;
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    textarea {
+      width: 100%;
+      padding: 13px 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      font-size: 1rem;
+      color: var(--text);
+      outline: none;
+      font-family: var(--font-body);
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+    }
+    input[type="text"]::placeholder, textarea::placeholder { color: #5c6a87; }
+
+    input[type="text"]:focus,
+    input[type="tel"]:focus,
+    textarea:focus {
+      border-color: var(--py-blue);
+      background: rgba(75,139,212,0.08);
+      box-shadow: 0 0 0 4px rgba(75,139,212,0.15);
+    }
+
+    textarea { resize: vertical; min-height: 120px; white-space: pre-wrap; font-family: var(--font-body); }
+
+    /* File upload */
+    .file-drop {
+      border: 1.5px dashed var(--glass-border);
+      border-radius: 12px;
+      padding: 26px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .file-drop:hover { border-color: var(--py-blue); background: rgba(75,139,212,0.06); transform: translateY(-2px); }
+    .file-drop.has-file { border-color: var(--success); background: rgba(52,211,153,0.07); }
+    .file-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .file-drop-icon { font-size: 1.8rem; margin-bottom: 6px; }
+    .file-drop-text { color: var(--text-dim); font-size: 0.9rem; }
+    .file-drop-filename { font-family: var(--font-mono); color: var(--success); font-size: 0.85rem; margin-top: 6px; }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+      background: linear-gradient(135deg, var(--py-blue), var(--py-blue-dim));
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 10px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      font-family: var(--font-body);
+      cursor: pointer;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      transform: translateY(0) translateZ(0);
+      box-shadow: 0 6px 18px -6px rgba(75,139,212,0.55), 0 1px 0 rgba(255,255,255,0.15) inset;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -6px rgba(75,139,212,0.65), 0 1px 0 rgba(255,255,255,0.15) inset; filter: brightness(1.08); }
+    .btn:active { transform: translateY(0px) scale(0.98); }
+    .btn::after {
+      content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+      background: linear-gradient(115deg, transparent, rgba(255,255,255,0.35), transparent);
+      transform: skewX(-20deg);
+      transition: left 0.5s ease;
+    }
+    .btn:hover::after { left: 130%; }
+
+    .btn-secondary { background: rgba(255,255,255,0.06); box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset; color: var(--text); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.1); filter: none; }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--glass-border);
+      color: var(--text-dim);
+      width: auto;
+      padding: 9px 14px;
+      font-size: 0.82rem;
+      box-shadow: none;
+    }
+    .btn-ghost:hover { border-color: var(--py-yellow); color: var(--py-yellow); transform: translateY(-1px); box-shadow: none; filter: none; }
+    .btn-ghost.active-flag { border-color: var(--py-yellow); color: var(--py-yellow); background: rgba(255,212,59,0.08); }
+
+    .nav-buttons { display: flex; gap: 12px; margin-top: 22px; }
+    .nav-buttons button { flex: 1; }
+
+    .top-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; }
+
+    /* ---------- Theme toggle ---------- */
+    .theme-toggle {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 1.1rem; transition: transform 0.3s ease, background 0.2s;
+      flex-shrink: 0;
+    }
+    .theme-toggle:hover { transform: rotate(20deg) scale(1.08); background: rgba(255,255,255,0.1); }
+
+    /* ---------- Progress ring / bar ---------- */
+    .progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+    .progress-bar-track {
+      flex: 1; height: 8px; border-radius: 6px; background: rgba(255,255,255,0.07);
+      overflow: hidden; position: relative;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 6px;
+      background: linear-gradient(90deg, var(--py-blue), var(--py-yellow));
+      width: 0%;
+      transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
+      box-shadow: 0 0 12px rgba(75,139,212,0.6);
+    }
+    .timer-pill {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--glass-border);
+      padding: 6px 12px;
+      border-radius: 20px;
+      color: var(--text);
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .timer-pill.low-time { color: var(--error); border-color: var(--error); animation: pulseWarn 1s infinite; }
+    @keyframes pulseWarn { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+    /* ---------- Question ---------- */
+    .q-meta {
+      font-size: 0.78rem;
+      font-family: var(--font-mono);
+      color: var(--py-yellow);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .q-title {
+      font-size: 1.12rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+      white-space: pre-wrap;
+      line-height: 1.6;
+      color: #fff;
+      font-family: var(--font-body);
+    }
+
+    .option-item {
+      display: flex;
+      align-items: flex-start;
+      padding: 14px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.02);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: background-color 0.18s, border-color 0.18s, transform 0.15s;
+      transform-style: preserve-3d;
+    }
+    .option-item:hover { background-color: rgba(75,139,212,0.09); border-color: var(--py-blue-dim); transform: translateX(4px); }
+    .option-item.selected { border-color: var(--py-blue); background: rgba(75,139,212,0.14); box-shadow: 0 0 0 1px var(--py-blue) inset; }
+
+    .option-item input[type="radio"] {
+      margin-top: 3px;
+      margin-right: 12px;
+      cursor: pointer;
+      accent-color: var(--py-blue);
+      width: 16px; height: 16px;
+      flex-shrink: 0;
+    }
+
+    .option-text { white-space: pre-wrap; line-height: 1.5; font-size: 0.95rem; }
+
+    .error-msg {
+      color: var(--error);
+      font-size: 0.85rem;
+      margin-top: 8px;
+      display: none;
+      font-family: var(--font-mono);
+    }
+
+    /* ---------- Palette ---------- */
+    .palette-overlay {
+      position: fixed; inset: 0; background: rgba(5,9,20,0.65);
+      backdrop-filter: blur(4px);
+      z-index: 10; display: none;
+      align-items: center; justify-content: center;
+      animation: fadeIn 0.2s ease;
+    }
+    .palette-overlay.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .palette-panel {
+      background: var(--bg-deep-2);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 22px;
+      width: 90%;
+      max-width: 380px;
+      box-shadow: 0 30px 60px -20px rgba(0,0,0,0.7);
+      animation: rise 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    .palette-legend { display: flex; gap: 14px; margin: 12px 0 16px; font-size: 0.75rem; color: var(--text-dim); flex-wrap: wrap; }
+    .palette-legend span { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .dot.answered { background: var(--success); }
+    .dot.unanswered { background: rgba(255,255,255,0.2); }
+    .dot.flagged { background: var(--py-yellow); }
+    .dot.current { background: var(--py-blue); }
+
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .palette-cell {
+      aspect-ratio: 1;
+      border-radius: 8px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255,255,255,0.04);
+      color: var(--text-dim);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.12s ease, background 0.15s ease;
+      position: relative;
+    }
+    .palette-cell:hover { transform: scale(1.08); }
+    .palette-cell.answered { background: rgba(52,211,153,0.16); border-color: var(--success); color: var(--success); }
+    .palette-cell.current { border-color: var(--py-blue); box-shadow: 0 0 0 2px rgba(75,139,212,0.4); color: #fff; }
+    .palette-cell.flagged::after {
+      content: ""; position: absolute; top: -3px; right: -3px; width: 8px; height: 8px;
+      border-radius: 50%; background: var(--py-yellow); box-shadow: 0 0 6px var(--py-yellow);
+    }
+
+    /* ---------- Loader ---------- */
+    .loader { text-align: center; padding: 44px 0; }
+    .code-spinner {
+      width: 56px; height: 56px; margin: 0 auto 20px;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-weight: 700; font-size: 1.3rem;
+      background: linear-gradient(135deg, rgba(75,139,212,0.18), rgba(255,212,59,0.10));
+      border: 1px solid var(--glass-border);
+      color: var(--py-yellow);
+      animation: spin3d 1.6s linear infinite;
+    }
+    @keyframes spin3d {
+      0%   { transform: rotateY(0deg) rotateX(0deg); }
+      50%  { transform: rotateY(180deg) rotateX(10deg); }
+      100% { transform: rotateY(360deg) rotateX(0deg); }
+    }
+    .loader p { color: var(--text-dim); font-family: var(--font-mono); font-size: 0.9rem; }
+    .loader .dots::after { content: ''; animation: dotting 1.4s steps(4,end) infinite; }
+    @keyframes dotting { 0%,20% { content:''; } 40% { content:'.'; } 60% { content:'..'; } 80%,100% { content:'...'; } }
+
+    /* ---------- Results: Certificate Marksheet ---------- */
+    .marksheet-wrap {
+      background: linear-gradient(180deg, #fbfaf6 0%, #f4f1e8 100%);
+      border-radius: 16px;
+      padding: 10px;
+      margin: -8px -8px 0;
+      box-shadow: 0 30px 70px -25px rgba(0,0,0,0.55);
+      animation: certRise 0.7s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes certRise { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+    .marksheet {
+      position: relative;
+      border: 3px solid #0f1f3d;
+      border-radius: 10px;
+      padding: 30px 22px 24px;
+      background: #fffdf8;
+      overflow: hidden;
+    }
+    .marksheet::before {
+      content: "";
+      position: absolute; inset: 8px;
+      border: 1.5px solid #c9a24b;
+      border-radius: 6px;
+      pointer-events: none;
+    }
+    .ms-content { position: relative; z-index: 1; }
+
+    .ms-crest {
+      width: 70px; height: 70px; margin: 0 auto 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.1rem;
+      background: linear-gradient(160deg, #12244a, #0b1730);
+      border: 2px solid #c9a24b;
+      border-radius: 50% 50% 46% 46% / 55% 55% 45% 45%;
+      color: #ffd94d;
+      box-shadow: 0 8px 18px -6px rgba(15,31,61,0.4);
+      animation: crestPop 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+    }
+    @keyframes crestPop { from { opacity: 0; transform: scale(0.5) rotate(-8deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
+
+    .ms-title {
+      font-family: 'Playfair Display', serif;
+      font-weight: 800;
+      font-size: 1.55rem;
+      text-align: center;
+      color: #0f1f3d;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .ms-divider {
+      width: 70%; margin: 0 auto 14px; height: 1px;
+      background: linear-gradient(90deg, transparent, #c9a24b, transparent);
+      position: relative;
+    }
+    .ms-divider::after { content: "❖"; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #fffdf8; padding: 0 8px; color: #c9a24b; font-size: 0.7rem; }
+
+    .ms-ribbon {
+      display: block; margin: 0 auto 18px; width: fit-content;
+      background: linear-gradient(160deg, #12244a, #0b1730);
+      color: #fff; font-family: var(--font-display); font-weight: 700;
+      font-size: 0.95rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 8px 26px; clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+      border: 1px solid #c9a24b;
+    }
+
+    .ms-info {
+      display: flex; align-items: center; gap: 14px; justify-content: space-between;
+      border: 1.5px solid #dcd3ba; border-radius: 10px; padding: 14px;
+      margin-bottom: 16px; background: #fffefb;
+    }
+    .ms-info-rows { flex: 1; min-width: 0; }
+    .ms-info-row { display: flex; gap: 6px; margin-bottom: 6px; font-size: 0.88rem; color: #33415e; }
+    .ms-info-row:last-child { margin-bottom: 0; }
+    .ms-info-row b { color: #0f1f3d; font-weight: 700; word-break: break-word; }
+    .ms-photo {
+      width: 66px; height: 82px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
+      border: 1.5px solid #0f1f3d; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .ms-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; border-radius: 8px; overflow: hidden; border: 1.5px solid #dcd3ba; }
+    .ms-table thead th {
+      background: linear-gradient(160deg, #12244a, #0b1730); color: #fff;
+      font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 10px 12px; text-align: left;
+    }
+    .ms-table tbody td { padding: 10px 12px; font-size: 0.9rem; color: #33415e; border-top: 1px solid #ece5d2; }
+    .ms-table tbody tr:nth-child(even) { background: #fbf8f0; }
+    .ms-table .ms-val { font-family: var(--font-display); font-weight: 700; color: #0f1f3d; text-align: right; }
+    .ms-val.correct { color: #1a9c6b; }
+    .ms-val.incorrect { color: #c8392b; }
+
+    .ms-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
+    .ms-grade-badge {
+      width: 78px; height: 78px; border-radius: 50%;
+      background: linear-gradient(160deg, #12244a, #0b1730);
+      border: 3px solid #c9a24b;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #fff; position: relative; flex-shrink: 0;
+      animation: badgeSpin 0.7s cubic-bezier(0.16,1,0.3,1) 0.25s both;
+    }
+    @keyframes badgeSpin { from { opacity: 0; transform: rotate(-25deg) scale(0.6); } to { opacity: 1; transform: rotate(0) scale(1); } }
+    .ms-grade-badge .g-label { font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: #ffd94d; }
+    .ms-grade-badge .g-letter { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 1.6rem; line-height: 1; }
+    .ms-grade-badge::after {
+      content: ""; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
+      border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 14px solid #0f1f3d;
+    }
+
+    .ms-remarks { flex: 1; min-width: 160px; border: 1px solid #dcd3ba; border-radius: 8px; padding: 10px 12px; background: #fffefb; }
+    .ms-remarks .r-title { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #12244a; font-weight: 700; margin-bottom: 4px; }
+    .ms-remarks .r-text { font-size: 0.83rem; color: #46536e; font-style: italic; line-height: 1.4; }
+
+    .ms-sign { text-align: center; flex-shrink: 0; }
+    .ms-sign .s-script { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.25rem; color: #12244a; }
+    .ms-sign .s-line { width: 100px; border-top: 1px solid #33415e; margin: 4px 0; }
+    .ms-sign .s-label { font-size: 0.68rem; color: #6b7690; letter-spacing: 0.04em; }
+
+    .ms-tagline { text-align: center; margin-top: 18px; font-family: 'Playfair Display', serif; font-style: italic; color: #7a6a3a; font-size: 0.8rem; }
+
+    .ms-email-note {
+      margin-top: 14px; text-align: center; font-family: var(--font-mono); font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .ms-email-note .ok { color: var(--success); }
+
+    #confetti-canvas { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
+
+    /* ---------- Exam security (deterrent-only, see JS comments) ---------- */
+    /* Disables easy text selection/copying during the exam. Inputs and the
+       theory-answer textarea are explicitly excluded so students can still
+       type and edit their own answers normally -- this does not interfere
+       with normal typing, screen readers, or accessibility tools. */
+    body.exam-security-active {
+      user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+    body.exam-security-active textarea,
+    body.exam-security-active input {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    /* ---------- NEW: Camera / attention monitoring UI (CHANGE 3, 4, 5) ---------- */
+    /* The video element is only used as a source frame for face-api.js; it's
+       tucked into a small corner thumbnail rather than hidden entirely so the
+       student can see they're on camera (transparency, not covert monitoring). */
+    #monitor-video {
+      position: fixed;
+      bottom: 14px;
+      right: 14px;
+      width: 84px;
+      height: 63px;
+      border-radius: 8px;
+      object-fit: cover;
+      border: 2px solid var(--glass-border);
+      z-index: 40;
+      background: #000;
+      display: none;
+      pointer-events: none; /* never intercept taps on controls beneath it, even on narrow screens */
+      transform: scaleX(-1); /* mirror, feels natural like a selfie camera */
+    }
+    #monitor-video.visible { display: block; }
+
+    #monitor-status {
+      position: fixed;
+      bottom: 82px;
+      right: 14px;
+      z-index: 40;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 6px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--glass-border);
+      background: rgba(10,15,30,0.85);
+      color: var(--text);
+      display: none;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    }
+    #monitor-status.visible { display: block; }
+    #monitor-status.status-ok { border-color: var(--success); }
+    #monitor-status.status-warn { border-color: var(--py-yellow); color: var(--py-yellow); }
+    #monitor-status.status-bad { border-color: var(--error); color: var(--error); }
+
+    #attention-toast {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      z-index: 41;
+      background: rgba(10,15,30,0.92);
+      border: 1px solid var(--py-yellow);
+      color: var(--py-yellow);
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      padding: 9px 18px;
+      border-radius: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    }
+    #attention-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ---------- NEW: Developer/test mode (CHANGE 7) ---------- */
+    #dev-mode-badge {
+      position: fixed;
+      top: 14px;
+      left: 14px;
+      z-index: 50;
+      background: #c9a24b;
+      color: #12244a;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      border-radius: 6px;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    #dev-mode-badge.visible { display: block; }
+
+    #dev-reveal-btn {
+      position: fixed;
+      top: 14px;
+      left: 100px;
+      z-index: 50;
+      display: none;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #c9a24b;
+      background: rgba(10,15,30,0.85);
+      color: #c9a24b;
+      cursor: pointer;
+    }
+    #dev-reveal-btn.visible { display: block; }
+
+    @media (max-width: 480px) {
+      .container { padding: 22px; }
+      .palette-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="bg-canvas"></div>
+<div class="glyphs" id="glyphs"></div>
+<canvas id="confetti-canvas"></canvas>
+
+<!-- NEW: camera/attention monitoring elements (CHANGE 3, 4, 5). Hidden until
+     the exam actually starts and the camera has been initialized. -->
+<video id="monitor-video" autoplay playsinline muted></video>
+<canvas id="monitor-canvas" style="display:none;"></canvas>
+<div id="monitor-status"></div>
+<div id="attention-toast"></div>
+
+<!-- NEW: developer/test mode indicators (CHANGE 7). Invisible to normal students. -->
+<div id="dev-mode-badge">DEV MODE</div>
+<button id="dev-reveal-btn" onclick="revealDeveloperAnswers()">Reveal Answers</button>
+
+<div class="stage" id="stage">
+  <div class="container">
+
+    <div class="chrome-dots"><span></span><span></span><span></span></div>
+
+    <!-- STEP 1: Details -->
+    <div id="step-1" class="step-section active">
+      <div class="eyebrow">python_test.exe</div>
+      <h1>Welcome to the Python Test</h1>
+      <p class="subtext">Enter your name and mobile number to begin the assessment.</p>
+      <div class="form-group">
+        <label for="student-name">Full Name</label>
+        <input type="text" id="student-name" placeholder="e.g. Ada Lovelace">
+      </div>
+      <div class="form-group">
+        <label for="student-mobile">Mobile Number</label>
+        <input type="tel" id="student-mobile" placeholder="e.g. 98765 43210">
+      </div>
+      <div class="form-group">
+        <label for="student-email">Email Address</label>
+        <input type="text" id="student-email" placeholder="e.g. ada@example.com">
+      </div>
+      <div id="step1-error" class="error-msg">Please enter your Name, Mobile Number and a valid Email Address.</div>
+      <button class="btn" onclick="goToStep2()">Continue &rarr;</button>
+    </div>
+
+    <!-- STEP 2: Upload -->
+    <div id="step-2" class="step-section">
+      <div class="eyebrow">identity_verification</div>
+      <h2>Upload Your Photo</h2>
+      <p class="subtext">This will be attached to your marksheet as proof of identity.</p>
+      <div class="form-group">
+        <label class="file-drop" id="file-drop" for="student-image">
+          <div class="file-drop-icon">📎</div>
+          <div class="file-drop-text">Click or drag an image here</div>
+          <div class="file-drop-filename" id="file-drop-filename"></div>
+          <input type="file" id="student-image" accept="image/*" onchange="onFileChosen()">
+        </label>
+      </div>
+      <div id="step2-error" class="error-msg">Please select an image before proceeding.</div>
+      <div class="form-group">
+        <label for="exam-duration">Exam Duration</label>
+        <select id="exam-duration" style="width:100%; padding:13px 14px; background:rgba(255,255,255,0.04); border:1px solid var(--glass-border); border-radius:10px; color:var(--text); font-family:var(--font-body); font-size:1rem;">
+          <option value="10">10 minutes</option>
+          <option value="20">20 minutes</option>
+          <option value="30" selected>30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60">60 minutes</option>
+          <option value="0">No time limit</option>
+        </select>
+      </div>
+      <button class="btn" id="start-btn" onclick="startTest()">Let's Start the Test</button>
+    </div>
+
+    <!-- LOADING -->
+    <div id="step-loading" class="step-section">
+      <div class="loader">
+        <div class="code-spinner">{ }</div>
+        <p id="loading-text">Loading questions<span class="dots"></span></p>
+      </div>
+    </div>
+
+    <!-- EXAM -->
+    <div id="step-exam" class="step-section">
+      <div class="top-actions">
+        <button class="btn-ghost" onclick="openPalette()">☰ Question Map</button>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="timer-pill" id="timer-pill">--:--</span>
+          <div class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">🌙</div>
+        </div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
+        <span id="progress-label" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-dim);">0%</span>
+      </div>
+      <div style="height:14px;"></div>
+      <div class="q-meta" id="q-meta"></div>
+      <div class="q-title" id="q-title"></div>
+      <div id="q-container"></div>
+      <div id="exam-error" class="error-msg">Please provide an answer before moving forward.</div>
+      <button class="btn-ghost" id="flag-btn" onclick="toggleFlag()" style="margin-top:6px;">🚩 Flag for review</button>
+      <div class="nav-buttons">
+        <button class="btn btn-secondary" id="btn-prev" onclick="prevQuestion()">Previous</button>
+        <button class="btn" id="btn-next" onclick="nextQuestion()">Next</button>
+        <button class="btn" id="btn-submit" style="display:none;" onclick="submitExam()">Submit Test</button>
+      </div>
+    </div>
+
+    <!-- RESULT -->
+    <div id="step-result" class="step-section">
+      <div class="marksheet-wrap">
+        <div class="marksheet">
+          <div class="ms-content">
+            <div class="ms-crest">🎓</div>
+            <div class="ms-title">TEST COMPLETED</div>
+            <div class="ms-divider"></div>
+            <div class="ms-ribbon">Marksheet</div>
+
+            <div class="ms-info">
+              <div class="ms-info-rows">
+                <div class="ms-info-row">👤 Student&nbsp;Name&nbsp;: <b id="res-name"></b></div>
+                <div class="ms-info-row">📱 Mobile&nbsp;Number&nbsp;: <b id="res-mobile"></b></div>
+                <div class="ms-info-row">✉️ Email&nbsp;: <b id="res-email"></b></div>
+              </div>
+              <img class="ms-photo" id="res-photo" src="" alt="Student photo" style="display:none;">
+            </div>
+
+            <table class="ms-table">
+              <thead><tr><th>Particulars</th><th style="text-align:right;">Details</th></tr></thead>
+              <tbody>
+                <tr><td>📋 Total Questions</td><td class="ms-val" id="res-total"></td></tr>
+                <tr><td>✅ Correct Answers</td><td class="ms-val correct" id="res-correct"></td></tr>
+                <tr><td>❌ Incorrect Answers</td><td class="ms-val incorrect" id="res-incorrect"></td></tr>
+                <tr><td>🔘 MCQ Score</td><td class="ms-val" id="res-mcq-score"></td></tr>
+                <tr><td>✍️ Theory Questions</td><td class="ms-val" id="res-theory-count"></td></tr>
+                <tr><td>🤖 Theory Marks (AI-evaluated)</td><td class="ms-val" id="res-theory-score"></td></tr>
+                <tr><td>⭐ Total Score</td><td class="ms-val" id="res-score"></td></tr>
+                <tr><td>％ Percentage</td><td class="ms-val" id="res-percentage-display"></td></tr>
+                <tr><td>⏱ Time Taken</td><td class="ms-val" id="res-time"></td></tr>
+              </tbody>
+            </table>
+            <div id="res-theory-pending-note" style="display:none; margin:-8px 0 16px; padding:10px 12px; border:1px solid #e8c874; background:#fff8e1; border-radius:8px; font-size:0.8rem; color:#7a5a10;">
+              ⚠️ Your theory answers are queued for AI evaluation and will be graded shortly. Save your Result ID below and check back to see your final marks.
+            </div>
+
+            <div class="ms-footer">
+              <div class="ms-grade-badge">
+                <div class="g-label">Grade</div>
+                <div class="g-letter" id="res-grade">-</div>
+              </div>
+              <div class="ms-remarks">
+                <div class="r-title">Remarks</div>
+                <div class="r-text" id="res-remarks">-</div>
+              </div>
+              <div class="ms-sign">
+                <div class="s-script">Claude</div>
+                <div class="s-line"></div>
+                <div class="s-label">Authorized Signature</div>
+                <div class="s-label" style="margin-top:6px;">Date: <span id="res-date"></span></div>
+              </div>
+            </div>
+
+            <div class="ms-tagline">★ Believe in yourself. Keep learning and keep growing! ★</div>
+          </div>
+        </div>
+      </div>
+      <div class="ms-email-note" id="ms-email-note"></div>
+
+      <div id="check-status-panel" style="display:none; margin-top:16px; text-align:center;">
+        <div style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-dim); margin-bottom:8px;">
+          Result ID: <span id="res-jobid" style="color:var(--py-yellow);"></span>
+        </div>
+        <button class="btn btn-secondary" id="check-status-btn" onclick="checkStatus()">🔄 Check My Final Result</button>
+        <div id="check-status-msg" style="margin-top:8px; font-family:var(--font-mono); font-size:0.78rem; color:var(--text-dim);"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Question palette modal -->
+<div class="palette-overlay" id="palette-overlay">
+  <div class="palette-panel">
+    <h2 style="font-size:1.1rem;">Question Map</h2>
+    <div class="palette-legend">
+      <span><i class="dot answered"></i>Answered</span>
+      <span><i class="dot unanswered"></i>Unanswered</span>
+      <span><i class="dot flagged"></i>Flagged</span>
+      <span><i class="dot current"></i>Current</span>
+    </div>
+    <div class="palette-grid" id="palette-grid"></div>
+    <button class="btn btn-secondary" style="margin-top:16px;" onclick="closePalette()">Close</button>
+  </div>
+</div>
+
+
+<script>
+  /*
+   * STATIC-HOST API BRIDGE
+   * This file is intended to run as a normal HTTPS top-level page
+   * (e.g. GitHub Pages / Cloudflare Pages), not inside Apps Script HtmlService.
+   *
+   * Set this to your deployed Cloudflare Worker URL.
+   */
+  const FRONTEND_API_URL = "https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev";
+
+  function callFrontendApi(action, args, onSuccess, onFailure) {
+    fetch(FRONTEND_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: action,
+        args: Array.isArray(args) ? args : []
+      })
+    })
+    .then(function(response) {
+      return response.text().then(function(raw) {
+        let data;
+        try {
+          data = JSON.parse(raw);
+        } catch (parseErr) {
+          throw new Error("Backend returned invalid JSON: " + raw.slice(0, 300));
+        }
+        if (!response.ok) {
+          throw new Error(data && data.message ? data.message : ("HTTP " + response.status));
+        }
+        return data;
+      });
+    })
+    .then(function(data) {
+      if (typeof onSuccess === "function") onSuccess(data);
+    })
+    .catch(function(err) {
+      console.error("[API]", action, err);
+      if (typeof onFailure === "function") onFailure(err);
+    });
+  }
+
+  function createScriptRunProxy(successHandler, failureHandler) {
+    const base = {
+      withSuccessHandler: function(fn) {
+        return createScriptRunProxy(fn, failureHandler);
+      },
+      withFailureHandler: function(fn) {
+        return createScriptRunProxy(successHandler, fn);
+      }
+    };
+
+    return new Proxy(base, {
+      get: function(target, property) {
+        if (property in target) return target[property];
+        return function() {
+          return callFrontendApi(
+            String(property),
+            Array.prototype.slice.call(arguments),
+            successHandler,
+            failureHandler
+          );
+        };
+      }
+    });
+  }
+
+  // Preserve the existing google.script.run calls in the exam code.
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  window.google.script.run = createScriptRunProxy(null, null);
+</script>
+
+<script>
+  /* ================= State ================= */
+  let studentData = { name: "", mobile: "", email: "", imageRaw: "" };
+  let questions = [];
+  let currentIndex = 0;
+  let userAnswers = {};
+  let flaggedQuestions = {};
+  let examDurationMinutes = 30;
+  let timeRemainingSeconds = 0;
+  let timerInterval = null;
+  let examStartTime = null;
+  let darkMode = true;
+
+  /* ================= Exam security / anti-cheating state =================
+     HONEST LIMITATION: none of the checks below can guarantee a student
+     isn't cheating. A web page cannot lock down someone's computer, stop
+     them using a second device or phone, block browser extensions, or
+     prevent OS-level screen capture/recording. This is a DETERRENT layer
+     and an audit trail (logged to the "SecurityLog" sheet), not a
+     lockdown. For real lockdown, run this inside a kiosk browser such as
+     Safe Exam Browser. ========================================= */
+  const EXAM_TEST_ID = "python_test_v1";
+  const MAX_SECURITY_WARNINGS = 3;         // configurable: violations before auto-submit
+  const VIOLATION_BATCH_WINDOW_MS = 200;   // coalesces events fired by ONE action (e.g. exiting
+                                            // fullscreen fires fullscreenchange + blur +
+                                            // visibilitychange almost simultaneously) into one violation
+  const VIOLATION_COOLDOWN_MS = 1500;      // minimum gap between two separate counted violations
+  let examSessionId = null;
+  let examSecurityActive = false;
+  let securityViolationCount = 0;
+  let violationBatchTimer = null;
+  let lastViolationProcessedTime = 0;
+
+  /* ================= Camera / attention monitoring config (CHANGE 3, 4, 6) =================
+     HONEST LIMITATION: webcam face/eye detection running in a browser is an
+     approximate heuristic, not a reliable proctoring guarantee. Lighting,
+     glasses, camera angle, and low-end devices all affect accuracy. This is
+     a deterrent + audit signal, exactly like the navigation checks above --
+     never treat it as biometric identity verification (it isn't; it never
+     stores or compares any face data, only transient in-browser detection). */
+  const CAMERA_REQUIRED = true;                 // admin-configurable: true blocks exam start without a working camera
+  const FACE_CHECK_INTERVAL_MS = 700;            // how often a frame is analyzed
+  const FACE_MISSING_WARNING_SECONDS = 3;        // no face detected, sustained
+  const MULTIPLE_FACES_WARNING_SECONDS = 2;      // more than one face detected, sustained
+  const EYES_CLOSED_WARNING_SECONDS = 3;         // per spec
+  const LOOK_AWAY_WARNING_SECONDS = 3;           // per spec
+  const EAR_CLOSED_THRESHOLD = 0.21;             // eye-aspect-ratio below this = eyes considered closed
+  const LOOK_AWAY_OFFSET_THRESHOLD = 0.35;       // horizontal nose-offset ratio beyond this = looking away
+  const MAX_ATTENTION_WARNINGS = 6;              // separate, more lenient counter -- see CHANGE 6
+  const ATTENTION_EVENTS_AFFECT_SECURITY_COUNT = false; // if true, hitting MAX_ATTENTION_WARNINGS also
+                                                          // adds ONE count to the navigation violation counter
+  let cameraMonitoringActive = false;
+  let cameraStream = null;
+  let faceApiModelsLoaded = false;
+  let faceDetectionInterval = null;
+  let faceMissingSinceMs = null;
+  let multipleFacesSinceMs = null;
+  let eyesClosedSinceMs = null;
+  let lookAwaySinceMs = null;
+  let attentionWarningCount = 0;
+  let lastAttentionToastTime = 0;
+
+  /* ================= Developer / test mode config (CHANGE 7) =================
+     Ctrl+Shift+D prompts for the developer code, which is verified on the
+     SERVER (verifyDeveloperCode); nothing here trusts a client-side flag by
+     itself. Developer mode never receives the answer key until a second,
+     separately-verified server call (getDeveloperAnswers) succeeds. */
+  let developerMode = false;
+  let developerCode = null;
+
+  /* ================= Ambient background glyphs ================= */
+  (function initGlyphs() {
+    const symbols = ["{ }", "( )", "[ ]", "def", "==", "!=", "->", "0x", "λ", "01"];
+    const container = document.getElementById('glyphs');
+    for (let i = 0; i < 16; i++) {
+      const el = document.createElement('div');
+      el.className = 'glyph' + (i % 3 === 0 ? ' yellow' : '');
+      el.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+      el.style.left = Math.random() * 100 + 'vw';
+      el.style.bottom = '-40px';
+      el.style.fontSize = (14 + Math.random() * 20) + 'px';
+      el.style.animationDuration = (14 + Math.random() * 12) + 's';
+      el.style.animationDelay = (Math.random() * 10) + 's';
+      container.appendChild(el);
+    }
+  })();
+
+  /* ================= 3D tilt on mouse move ================= */
+  const stage = document.getElementById('stage');
+  document.addEventListener('mousemove', (e) => {
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    stage.style.transform = `rotateY(${x * 3}deg) rotateX(${-y * 3}deg)`;
+  });
+  document.addEventListener('mouseleave', () => { stage.style.transform = 'rotateY(0) rotateX(0)'; });
+
+  /* ================= Theme toggle ================= */
+  function toggleTheme() {
+    darkMode = !darkMode;
+    const root = document.documentElement.style;
+    const toggle = document.getElementById('theme-toggle');
+    if (darkMode) {
+      root.setProperty('--bg-deep', '#0a0f1e');
+      root.setProperty('--bg-deep-2', '#10182c');
+      toggle.textContent = '🌙';
+    } else {
+      root.setProperty('--bg-deep', '#eef2fb');
+      root.setProperty('--bg-deep-2', '#dde5f7');
+      toggle.textContent = '☀️';
+    }
+  }
+
+  /* ================= Exam security / anti-cheating ================= */
+
+  function getCurrentQNum() {
+    return (questions[currentIndex] && questions[currentIndex].qNum) || "";
+  }
+
+  function logSecurityEventToServer(eventType, details) {
+    try {
+      google.script.run
+        .withSuccessHandler(function () {})
+        .withFailureHandler(function () {})
+        .logSecurityEvent({
+          studentId: studentData.mobile || studentData.name || "unknown",
+          testId: EXAM_TEST_ID,
+          eventType: eventType,
+          questionNumber: getCurrentQNum(),
+          details: details || ""
+        });
+    } catch (e) { /* logging must never break the exam */ }
+  }
+
+  // Records + logs a security event. `countsTowardLimit` decides whether it
+  // pushes the student toward the MAX_SECURITY_WARNINGS auto-submit.
+  //
+  // FIX: alert() blocks the whole page. A single action (e.g. exiting
+  // fullscreen) fires several events almost at once (fullscreenchange,
+  // blur, visibilitychange) — each one used to check "has it been
+  // VIOLATION_COOLDOWN_MS since the last violation?", but that check ran
+  // AFTER the previous event's alert() had already blocked the page for
+  // as long as the student took to click OK, which is usually longer than
+  // the cooldown — so every sibling event slipped through as a "new"
+  // violation and the warnings fired back-to-back-to-back for one action.
+  //
+  // Fix: batch every event that fires within VIOLATION_BATCH_WINDOW_MS
+  // into a single violation BEFORE showing any alert at all, then apply
+  // the cooldown to that batch's start time (not to when its alert was
+  // dismissed) so later, genuinely separate actions are still caught.
+  function recordSecurityEvent(eventType, details, countsTowardLimit) {
+    logSecurityEventToServer(eventType, details);
+    // Developer/test mode: still logged for completeness, but never pops
+    // alerts or auto-submits -- see CHANGE 7.
+    if (developerMode) return;
+    if (!examSecurityActive || !countsTowardLimit) return;
+
+    // Already mid-batch (another event from this same burst arrived) --
+    // it'll be covered by the pending batch, nothing more to do.
+    if (violationBatchTimer) return;
+
+    // Too soon after the last *processed* violation -- treat as noise
+    // from the same ongoing action rather than a fresh one.
+    if (Date.now() - lastViolationProcessedTime < VIOLATION_COOLDOWN_MS) return;
+
+    violationBatchTimer = setTimeout(function () {
+      violationBatchTimer = null;
+      lastViolationProcessedTime = Date.now();
+      if (!examSecurityActive) return;
+
+      securityViolationCount++;
+      if (securityViolationCount === 1) {
+        alert("Warning: Leaving the test window is not allowed. (Violation 1 of " + MAX_SECURITY_WARNINGS + ")");
+      } else if (securityViolationCount === 2) {
+        alert("⚠️ Second warning: leaving the test window again will auto-submit your test. (Violation 2 of " + MAX_SECURITY_WARNINGS + ")");
+      } else if (securityViolationCount >= MAX_SECURITY_WARNINGS) {
+        alert("Maximum security violations reached (" + MAX_SECURITY_WARNINGS + "). Your test is being submitted automatically.");
+        forceSubmit();
+      }
+    }, VIOLATION_BATCH_WINDOW_MS);
+  }
+
+  // ================= NEW: lower-confidence attention events (CHANGE 6) =================
+  // EYES_CLOSED / LOOKING_AWAY never trigger the alert()-based navigation-
+  // violation flow above. They use a gentle in-page toast, a much more
+  // generous counter (MAX_ATTENTION_WARNINGS), and by default do NOT
+  // auto-submit at all -- webcam attention detection is too imprecise to
+  // fail a student over. ATTENTION_EVENTS_AFFECT_SECURITY_COUNT is an
+  // explicit opt-in if a deployment wants repeated attention issues to
+  // eventually count as one navigation-style violation.
+  function recordAttentionEvent(eventType, details, approxDurationSeconds) {
+    logSecurityEventToServer(eventType, details + ' (~' + approxDurationSeconds + 's)');
+    if (developerMode || !examSecurityActive) return;
+
+    attentionWarningCount++;
+    showAttentionToast(eventType === 'EYES_CLOSED' ? 'Please open your eyes and focus on the screen.' : 'Please focus on the exam screen.');
+
+    if (ATTENTION_EVENTS_AFFECT_SECURITY_COUNT && attentionWarningCount >= MAX_ATTENTION_WARNINGS) {
+      attentionWarningCount = 0; // reset so it can only contribute once per burst of issues
+      recordSecurityEvent('ATTENTION_THRESHOLD_EXCEEDED', 'Repeated attention warnings (' + MAX_ATTENTION_WARNINGS + ') during exam.', true);
+    }
+  }
+
+  function showAttentionToast(message) {
+    const toast = document.getElementById('attention-toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.classList.add('visible');
+    const now = Date.now();
+    lastAttentionToastTime = now;
+    setTimeout(function () {
+      if (lastAttentionToastTime === now) toast.classList.remove('visible');
+    }, 2500);
+  }
+
+  function requestExamFullscreen() {
+    if (developerMode) return; // dev testing shouldn't be forced into fullscreen repeatedly
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (req) {
+      try { req.call(el).catch(function () {}); } catch (e) { /* fullscreen not available -- deterrent only, exam still proceeds */ }
+    }
+  }
+
+  function handleFullscreenChange() {
+    if (examSecurityActive && !document.fullscreenElement && !document.webkitFullscreenElement) {
+      recordSecurityEvent('FULLSCREEN_EXIT', 'Student exited fullscreen during the exam.', true);
+    }
+  }
+
+  function handleVisibilityChange() {
+    if (examSecurityActive && document.visibilityState === 'hidden') {
+      recordSecurityEvent('TAB_SWITCH', 'Tab/window became hidden during the exam.', true);
+    }
+  }
+
+  function handleWindowBlur() {
+    if (examSecurityActive) {
+      recordSecurityEvent('WINDOW_BLUR', 'Browser window lost focus during the exam.', true);
+    }
+  }
+
+  function handleBlockedClipboardEvent(e, eventType) {
+    if (!examSecurityActive || developerMode) return;
+    e.preventDefault();
+    recordSecurityEvent(eventType, 'Blocked during exam.', false);
+  }
+
+  function handleContextMenu(e) {
+    if (!examSecurityActive || developerMode) return;
+    e.preventDefault();
+    recordSecurityEvent('RIGHT_CLICK', 'Right-click / context menu blocked during exam.', false);
+  }
+
+  function handleBeforeUnload(e) {
+    if (!examSecurityActive || developerMode) return;
+    recordSecurityEvent('PAGE_LEAVE', 'Student attempted to leave/reload the test page.', false);
+    e.preventDefault();
+    e.returnValue = ''; // triggers the browser's native "leave site?" prompt
+  }
+
+  function activateExamSecurity() {
+    examSecurityActive = true;
+    securityViolationCount = 0;
+    attentionWarningCount = 0;
+    lastViolationProcessedTime = 0;
+    if (violationBatchTimer) { clearTimeout(violationBatchTimer); violationBatchTimer = null; }
+    document.body.classList.add('exam-security-active');
+    requestExamFullscreen();
+    startCameraMonitoring();
+  }
+
+  function deactivateExamSecurity() {
+    examSecurityActive = false;
+    if (violationBatchTimer) { clearTimeout(violationBatchTimer); violationBatchTimer = null; }
+    document.body.classList.remove('exam-security-active');
+    if (document.fullscreenElement && document.exitFullscreen) {
+      try { document.exitFullscreen().catch(function () {}); } catch (e) { /* ignore */ }
+    }
+    stopCameraMonitoring();
+  }
+
+  /* ================= NEW: Camera / face / attention monitoring (CHANGE 3, 4, 5) =================
+     This does NOT perform facial identity recognition and does NOT store any
+     biometric data anywhere -- every frame is analyzed transiently in the
+     browser and only short text log lines (e.g. "FACE_MISSING") are ever
+     sent to the server, via the same logSecurityEventToServer used for the
+     navigation checks above. */
+
+  function updateMonitorStatus(level, text) {
+    const el = document.getElementById('monitor-status');
+    if (!el) return;
+    el.textContent = text;
+    el.classList.add('visible');
+    el.classList.remove('status-ok', 'status-warn', 'status-bad');
+    el.classList.add(level === 'ok' ? 'status-ok' : (level === 'warn' ? 'status-warn' : 'status-bad'));
+  }
+
+  function loadFaceApiModelsIfNeeded() {
+    if (faceApiModelsLoaded) return Promise.resolve(true);
+    if (typeof faceapi === 'undefined') return Promise.resolve(false); // CDN script failed to load -- degrade gracefully
+    const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model';
+    return Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL)
+    ]).then(function () {
+      faceApiModelsLoaded = true;
+      return true;
+    }).catch(function (err) {
+      logSecurityEventToServer('CAMERA_UNAVAILABLE', 'face-api model load failed: ' + err.toString());
+      return false;
+    });
+  }
+
+  
+  function showCameraPermissionModal(onAllowed, onCancelled) {
+    const modal = document.getElementById('camera-permission-modal');
+    const continueBtn = document.getElementById('camera-permission-continue');
+    const cancelBtn = document.getElementById('camera-permission-cancel');
+    const errorEl = document.getElementById('camera-permission-error');
+
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    modal.style.display = 'flex';
+
+    const cleanup = function() {
+      modal.style.display = 'none';
+      continueBtn.onclick = null;
+      cancelBtn.onclick = null;
+    };
+
+    continueBtn.onclick = function() {
+      continueBtn.disabled = true;
+      continueBtn.textContent = 'Requesting camera…';
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        errorEl.textContent = 'This browser does not support camera access.';
+        errorEl.style.display = 'block';
+        continueBtn.disabled = false;
+        continueBtn.textContent = 'Continue & Allow Camera';
+        return;
+      }
+
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+          cleanup();
+          cameraStream = stream;
+          if (typeof onAllowed === 'function') onAllowed(stream);
+        })
+        .catch(function(err) {
+          console.error('CAMERA PERMISSION ERROR:', err && err.name, err && err.message, err);
+          const msg =
+            err && err.name === 'NotAllowedError'
+              ? 'Camera permission was denied. Click Allow in the browser camera prompt and try again.'
+              : err && err.name === 'NotFoundError'
+                ? 'No camera was found on this device.'
+                : err && err.name === 'NotReadableError'
+                  ? 'The camera is already in use by another application.'
+                  : err && err.name === 'SecurityError'
+                    ? 'The browser blocked camera access for this page.'
+                    : 'Camera access failed: ' + ((err && err.message) || (err && err.name) || 'unknown error');
+
+          errorEl.textContent = msg;
+          errorEl.style.display = 'block';
+          continueBtn.disabled = false;
+          continueBtn.textContent = 'Try Camera Again';
+        });
+    };
+
+    cancelBtn.onclick = function() {
+      cleanup();
+      if (typeof onCancelled === 'function') onCancelled();
+    };
+  }
+
+function startCameraMonitoring() {
+    const videoEl = document.getElementById('monitor-video');
+    if (!videoEl) return;
+
+    const useStream = function (stream) {
+      cameraStream = stream;
+      videoEl.srcObject = stream;
+      videoEl.classList.add('visible');
+      cameraMonitoringActive = true;
+      updateMonitorStatus('ok', '🟢 Attention OK');
+
+      loadFaceApiModelsIfNeeded().then(function (loaded) {
+        if (!loaded) {
+          updateMonitorStatus('warn', '📷 Monitoring unavailable');
+          return; // still don't block the exam -- see head-of-file comment
+        }
+        faceMissingSinceMs = null;
+        multipleFacesSinceMs = null;
+        eyesClosedSinceMs = null;
+        lookAwaySinceMs = null;
+        faceDetectionInterval = setInterval(runFaceDetectionTick, FACE_CHECK_INTERVAL_MS);
+      });
+    };
+
+    if (cameraStream && cameraStream.active) {
+      // Reuse the stream opened during the CAMERA_REQUIRED pre-check, if any.
+      useStream(cameraStream);
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      logSecurityEventToServer('CAMERA_UNAVAILABLE', 'navigator.mediaDevices.getUserMedia not supported by this browser.');
+      updateMonitorStatus('warn', '📷 Camera not supported');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(useStream)
+      .catch(function (err) {
+        const eventType = (err && err.name === 'NotAllowedError')
+          ? 'CAMERA_PERMISSION_DENIED'
+          : 'CAMERA_UNAVAILABLE';
+
+        console.error('CAMERA ERROR:', err && err.name, err && err.message, err);
+
+        logSecurityEventToServer(
+          eventType,
+          'getUserMedia failed during exam: ' +
+          (err ? ((err.name || '') + ': ' + (err.message || err.toString())) : 'unknown error')
+        );
+
+        let statusText = '📷 Camera unavailable';
+        if (err && err.name === 'NotAllowedError') {
+          statusText = '📷 Camera permission blocked';
+        } else if (err && err.name === 'NotFoundError') {
+          statusText = '📷 No camera found';
+        } else if (err && err.name === 'NotReadableError') {
+          statusText = '📷 Camera is busy or unavailable';
+        } else if (err && err.name === 'SecurityError') {
+          statusText = '📷 Camera blocked by browser security';
+        }
+
+        updateMonitorStatus('warn', statusText);
+        console.warn('Camera access failed:', err && err.name, err && err.message);
+
+        // CAMERA_REQUIRED was enforced before the exam started. If access
+        // fails later, log it and keep the current exam running.
+      });
+  }
+
+  function stopCameraMonitoring() {
+    cameraMonitoringActive = false;
+    if (faceDetectionInterval) { clearInterval(faceDetectionInterval); faceDetectionInterval = null; }
+    const videoEl = document.getElementById('monitor-video');
+    if (videoEl) { videoEl.classList.remove('visible'); videoEl.srcObject = null; }
+    const statusEl = document.getElementById('monitor-status');
+    if (statusEl) statusEl.classList.remove('visible');
+    if (cameraStream) {
+      try { cameraStream.getTracks().forEach(function (t) { t.stop(); }); } catch (e) { /* ignore */ }
+      cameraStream = null;
+    }
+  }
+
+  // Eye Aspect Ratio (Soukupová & Čech) using the 6-point eye landmarks from
+  // the 68-point face model. Lower EAR = more closed. This is a standard,
+  // well-established blink-detection heuristic, not a novel/experimental one.
+  function eyeAspectRatio(eye) {
+    const dist = function (a, b) { return Math.hypot(a.x - b.x, a.y - b.y); };
+    const vertical = dist(eye[1], eye[5]) + dist(eye[2], eye[4]);
+    const horizontal = 2 * dist(eye[0], eye[3]);
+    return horizontal > 0 ? vertical / horizontal : 0;
+  }
+
+  function runFaceDetectionTick() {
+    if (!examSecurityActive || !cameraMonitoringActive || typeof faceapi === 'undefined') return;
+    const videoEl = document.getElementById('monitor-video');
+    if (!videoEl || videoEl.readyState < 2) return;
+
+    const options = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+    faceapi.detectAllFaces(videoEl, options).withFaceLandmarks(true)
+      .then(function (results) {
+        const now = Date.now();
+
+        if (!results || results.length === 0) {
+          faceMissingSinceMs = faceMissingSinceMs || now;
+          multipleFacesSinceMs = null;
+          eyesClosedSinceMs = null;
+          lookAwaySinceMs = null;
+          const missingSec = (now - faceMissingSinceMs) / 1000;
+          if (missingSec >= FACE_MISSING_WARNING_SECONDS) {
+            updateMonitorStatus('bad', '🔴 Face not detected');
+            recordAttentionEvent('FACE_MISSING', 'No face detected in frame.', missingSec.toFixed(1));
+          } else {
+            updateMonitorStatus('warn', '🟡 Please stay in view');
+          }
+          return;
+        }
+
+        faceMissingSinceMs = null;
+
+        if (results.length > 1) {
+          multipleFacesSinceMs = multipleFacesSinceMs || now;
+          eyesClosedSinceMs = null;
+          lookAwaySinceMs = null;
+          const multiSec = (now - multipleFacesSinceMs) / 1000;
+          if (multiSec >= MULTIPLE_FACES_WARNING_SECONDS) {
+            updateMonitorStatus('bad', '🔴 Multiple faces detected');
+            recordAttentionEvent('MULTIPLE_FACES', 'More than one face detected in frame.', multiSec.toFixed(1));
+          } else {
+            updateMonitorStatus('warn', '🟡 Please stay in view');
+          }
+          return;
+        }
+        multipleFacesSinceMs = null;
+
+        // Exactly one face -- check eyes + rough gaze direction.
+        const landmarks = results[0].landmarks;
+        const positions = landmarks.positions;
+        // face-api's 68-point layout: left eye 36-41, right eye 42-47, jaw 0 & 16, nose tip 30.
+        const leftEye = positions.slice(36, 42);
+        const rightEye = positions.slice(42, 48);
+        const ear = (eyeAspectRatio(leftEye) + eyeAspectRatio(rightEye)) / 2;
+
+        if (ear < EAR_CLOSED_THRESHOLD) {
+          eyesClosedSinceMs = eyesClosedSinceMs || now;
+          const closedSec = (now - eyesClosedSinceMs) / 1000;
+          if (closedSec >= EYES_CLOSED_WARNING_SECONDS) {
+            updateMonitorStatus('warn', '🟡 Please focus on the screen');
+            recordAttentionEvent('EYES_CLOSED', 'Eyes appear closed.', closedSec.toFixed(1));
+          }
+        } else {
+          eyesClosedSinceMs = null;
+
+          // Rough head/gaze heuristic: nose position relative to the jaw
+          // outline's horizontal center. This is a coarse approximation of
+          // "looking away", not true gaze tracking.
+          const jawLeft = positions[0];
+          const jawRight = positions[16];
+          const nose = positions[30];
+          const faceWidth = Math.abs(jawRight.x - jawLeft.x) || 1;
+          const faceCenterX = (jawLeft.x + jawRight.x) / 2;
+          const offsetRatio = (nose.x - faceCenterX) / faceWidth;
+
+          if (Math.abs(offsetRatio) > LOOK_AWAY_OFFSET_THRESHOLD) {
+            lookAwaySinceMs = lookAwaySinceMs || now;
+            const awaySec = (now - lookAwaySinceMs) / 1000;
+            if (awaySec >= LOOK_AWAY_WARNING_SECONDS) {
+              updateMonitorStatus('warn', '🟡 Please focus on the screen');
+              recordAttentionEvent('LOOKING_AWAY', 'Head/gaze appears turned away from the screen.', awaySec.toFixed(1));
+            }
+          } else {
+            lookAwaySinceMs = null;
+            updateMonitorStatus('ok', '🟢 Attention OK');
+          }
+        }
+      })
+      .catch(function () { /* a single failed frame is not worth logging or alarming over */ });
+  }
+
+  // These listeners are attached once and are harmless outside the exam --
+  // every handler above checks `examSecurityActive` before doing anything,
+  // so registration/upload steps are completely unaffected.
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('blur', handleWindowBlur);
+  document.addEventListener('copy', function (e) { handleBlockedClipboardEvent(e, 'COPY_ATTEMPT'); });
+  document.addEventListener('cut', function (e) { handleBlockedClipboardEvent(e, 'COPY_ATTEMPT'); });
+  document.addEventListener('paste', function (e) { handleBlockedClipboardEvent(e, 'PASTE_ATTEMPT'); });
+  document.addEventListener('contextmenu', handleContextMenu);
+  window.addEventListener('beforeunload', handleBeforeUnload);
+
+  /* ================= NEW: Developer / test mode (CHANGE 7) =================
+     Ctrl+Shift+D prompts for the developer code. The code is verified on
+     the SERVER (verifyDeveloperCode) -- entering the right string is
+     required no matter what any client-side variable says. Answers are
+     only ever fetched afterwards, via a SEPARATE server call that
+     re-validates the same code again (getDeveloperAnswers), so a normal
+     student poking around in DevTools has no path to the answer key. */
+  document.addEventListener('keydown', function (e) {
+    if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+      e.preventDefault();
+      const code = prompt('Developer code:');
+      if (code === null) return;
+      google.script.run
+        .withSuccessHandler(function (result) {
+          if (result && result.status === 'SUCCESS') {
+            developerMode = true;
+            developerCode = code;
+            document.getElementById('dev-mode-badge').classList.add('visible');
+            document.getElementById('dev-reveal-btn').classList.add('visible');
+            console.log('[dev mode] enabled');
+          } else {
+            alert('Invalid developer code.');
+          }
+        })
+        .withFailureHandler(function () { alert('Could not verify developer code (server error).'); })
+        .verifyDeveloperCode(code);
+    }
+  });
+
+  function revealDeveloperAnswers() {
+    if (!developerMode || !developerCode) return;
+    google.script.run
+      .withSuccessHandler(function (result) {
+        if (!result || result.status !== 'SUCCESS') {
+          alert('Could not load answers: ' + (result && result.message));
+          return;
+        }
+        const byQNum = {};
+        result.answers.forEach(function (a) { byQNum[a.qNum] = a; });
+
+        const q = questions[currentIndex];
+        if (!q) return;
+        const answer = byQNum[q.qNum];
+        if (!answer) return;
+
+        if (answer.optionsType && answer.optionsType.trim() === 'Theory question') {
+          const textarea = document.querySelector('#q-container textarea');
+          if (textarea) {
+            textarea.value = answer.correctAnswer;
+            userAnswers[q.qNum] = answer.correctAnswer;
+            updateProgress();
+            refreshPaletteCell(currentIndex);
+          }
+        } else {
+          const radios = document.querySelectorAll('#q-container input[type="radio"]');
+          radios.forEach(function (radio) {
+            if (radio.value === answer.correctAnswer) {
+              radio.checked = true;
+              radio.dispatchEvent(new Event('change'));
+            }
+          });
+        }
+      })
+      .withFailureHandler(function () { alert('Could not load answers (server error).'); })
+      .getDeveloperAnswers(developerCode);
+  }
+
+  /* ================= Navigation helpers ================= */
+  function showStep(stepId) {
+    document.querySelectorAll('.step-section').forEach(el => el.classList.remove('active'));
+    document.getElementById(stepId).classList.add('active');
+  }
+
+  function goToStep2() {
+    const name = document.getElementById('student-name').value.trim();
+    const mobile = document.getElementById('student-mobile').value.trim();
+    const email = document.getElementById('student-email').value.trim();
+    const errorEl = document.getElementById('step1-error');
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!name || !mobile || !email || !emailValid) { errorEl.style.display = 'block'; return; }
+    errorEl.style.display = 'none';
+    studentData.name = name;
+    studentData.mobile = mobile;
+    studentData.email = email;
+    showStep('step-2');
+  }
+
+  function onFileChosen() {
+    const fileInput = document.getElementById('student-image');
+    const drop = document.getElementById('file-drop');
+    const nameEl = document.getElementById('file-drop-filename');
+    if (fileInput.files && fileInput.files.length > 0) {
+      drop.classList.add('has-file');
+      nameEl.textContent = "✓ " + fileInput.files[0].name;
+      document.getElementById('step2-error').style.display = 'none';
+    }
+  }
+
+  function startTest() {
+    const fileInput = document.getElementById('student-image');
+    const errorEl = document.getElementById('step2-error');
+    if (!fileInput.files || fileInput.files.length === 0) { errorEl.style.display = 'block'; return; }
+    errorEl.style.display = 'none';
+
+    examDurationMinutes = parseInt(document.getElementById('exam-duration').value, 10);
+
+    // NEW (CHANGE 3): if CAMERA_REQUIRED, the camera must actually work
+    // BEFORE the exam session (and therefore the exam) is allowed to start.
+    // If CAMERA_REQUIRED is false, we don't block here at all -- monitoring
+    // is attempted later, opportunistically, once the exam view is showing.
+    if (CAMERA_REQUIRED) {
+      showStep('step-2');
+      document.getElementById('loading-text').innerHTML = 'Camera permission required<span class="dots"></span>';
+
+      showCameraPermissionModal(
+        function(stream) {
+          // Camera permission succeeded. Reuse this stream when the exam view opens.
+          cameraStream = stream;
+          proceedToStartExamSession();
+        },
+        function() {
+          document.getElementById('loading-text').innerHTML = 'Camera permission is required to start the exam.';
+          showStep('step-2');
+        }
+      );
+    } else {
+      proceedToStartExamSession();
+    }
+  }
+
+  function proceedToStartExamSession() {
+    showStep('step-loading');
+    document.getElementById('loading-text').innerHTML = 'Loading questions from Google Sheets<span class="dots"></span>';
+
+    // NEW: open a server-side exam session first. The server records the
+    // start time on ITS OWN clock -- this is what the submission is later
+    // checked against, so tampering with the browser clock or the
+    // countdown variables below only affects what the student sees, not
+    // what actually gets validated.
+    google.script.run
+      .withSuccessHandler(onExamSessionStarted)
+      .withFailureHandler(onFailure)
+      .startExamSession(examDurationMinutes, studentData.name, studentData.mobile);
+  }
+
+  function onExamSessionStarted(session) {
+    if (session && session.status === 'SUCCESS') {
+      examSessionId = session.sessionId;
+    }
+
+    const fileInput = document.getElementById('student-image');
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      studentData.imageRaw = e.target.result;
+      google.script.run
+        .withSuccessHandler(onQuestionsLoaded)
+        .withFailureHandler(onFailure)
+        .getQuestions();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function onQuestionsLoaded(data) {
+    if (!data || data.length === 0) {
+      alert("No questions found in the Google Sheet. Please check the sheet configuration.");
+      showStep('step-1');
+      return;
+    }
+    questions = data;
+    currentIndex = 0;
+    examStartTime = Date.now();
+    showStep('step-exam');
+    renderQuestion();
+    buildPalette();
+    activateExamSecurity();
+    if (examDurationMinutes > 0) {
+      timeRemainingSeconds = examDurationMinutes * 60;
+      startTimer();
+    } else {
+      document.getElementById('timer-pill').textContent = '∞';
+    }
+  }
+
+  /* ================= Timer ================= */
+  function startTimer() {
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      timeRemainingSeconds--;
+      updateTimerDisplay();
+      if (timeRemainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        recordSecurityEvent('TIME_EXPIRED', 'Client-side countdown reached zero.', false);
+        alert("Time is up! Your test will be submitted automatically.");
+        forceSubmit();
+      }
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const pill = document.getElementById('timer-pill');
+    const mins = Math.floor(timeRemainingSeconds / 60);
+    const secs = timeRemainingSeconds % 60;
+    pill.textContent = String(mins).padStart(2,'0') + ':' + String(secs).padStart(2,'0');
+    pill.classList.toggle('low-time', timeRemainingSeconds <= 60);
+  }
+
+  /* ================= Rendering ================= */
+  function renderQuestion() {
+    document.getElementById('exam-error').style.display = 'none';
+    const q = questions[currentIndex];
+
+    document.getElementById('q-meta').innerHTML =
+      `<span>Section ${q.section} · ${q.topic}</span><span>Q ${currentIndex + 1} / ${questions.length}</span>`;
+    document.getElementById('q-title').innerText = `${q.qNum}: ${q.questionText}`;
+
+    const container = document.getElementById('q-container');
+    container.innerHTML = "";
+
+    const isTheory = q.optionsType.trim() === "Theory question";
+
+    if (isTheory) {
+      const textarea = document.createElement('textarea');
+      textarea.placeholder = "Type your answer here...";
+      textarea.value = userAnswers[q.qNum] || "";
+      textarea.oninput = function() {
+        userAnswers[q.qNum] = textarea.value;
+        updateProgress();
+        refreshPaletteCell(currentIndex);
+      };
+      container.appendChild(textarea);
+    } else {
+      const options = parseOptions(q.optionsType);
+      options.forEach(optStr => {
+        const item = document.createElement('label');
+        item.className = 'option-item';
+        if (userAnswers[q.qNum] === optStr) item.classList.add('selected');
+
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'mcq_option';
+        radio.value = optStr;
+        if (userAnswers[q.qNum] === optStr) radio.checked = true;
+
+        radio.onchange = function() {
+          userAnswers[q.qNum] = optStr;
+          document.querySelectorAll('.option-item').forEach(el => el.classList.remove('selected'));
+          item.classList.add('selected');
+          updateProgress();
+          refreshPaletteCell(currentIndex);
+        };
+
+        const span = document.createElement('span');
+        span.className = 'option-text';
+        span.innerText = optStr;
+
+        item.appendChild(radio);
+        item.appendChild(span);
+        container.appendChild(item);
+      });
+    }
+
+    document.getElementById('btn-prev').style.display = currentIndex === 0 ? 'none' : 'block';
+    if (currentIndex === questions.length - 1) {
+      document.getElementById('btn-next').style.display = 'none';
+      document.getElementById('btn-submit').style.display = 'block';
+    } else {
+      document.getElementById('btn-next').style.display = 'block';
+      document.getElementById('btn-submit').style.display = 'none';
+    }
+
+    const flagBtn = document.getElementById('flag-btn');
+    flagBtn.classList.toggle('active-flag', !!flaggedQuestions[q.qNum]);
+    flagBtn.textContent = flaggedQuestions[q.qNum] ? '🚩 Flagged for review' : '🚩 Flag for review';
+
+    updateProgress();
+    highlightCurrentPaletteCell();
+  }
+
+  function parseOptions(optionsTypeStr) {
+    if (!optionsTypeStr) return [];
+    return optionsTypeStr.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+  }
+
+  function updateProgress() {
+    const answered = questions.filter(q => userAnswers[q.qNum] && userAnswers[q.qNum].toString().trim() !== "").length;
+    const pct = Math.round((answered / questions.length) * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('progress-label').textContent = pct + '%';
+  }
+
+  function toggleFlag() {
+    const q = questions[currentIndex];
+    flaggedQuestions[q.qNum] = !flaggedQuestions[q.qNum];
+    document.getElementById('flag-btn').classList.toggle('active-flag', !!flaggedQuestions[q.qNum]);
+    refreshPaletteCell(currentIndex);
+  }
+
+  /* ================= Question palette ================= */
+  function buildPalette() {
+    const grid = document.getElementById('palette-grid');
+    grid.innerHTML = "";
+    questions.forEach((q, idx) => {
+      const cell = document.createElement('button');
+      cell.className = 'palette-cell';
+      cell.id = 'palette-cell-' + idx;
+      cell.textContent = idx + 1;
+      cell.onclick = () => { currentIndex = idx; renderQuestion(); closePalette(); };
+      grid.appendChild(cell);
+    });
+    highlightCurrentPaletteCell();
+  }
+
+  function refreshPaletteCell(idx) {
+    const cell = document.getElementById('palette-cell-' + idx);
+    if (!cell) return;
+    const q = questions[idx];
+    const answered = userAnswers[q.qNum] && userAnswers[q.qNum].toString().trim() !== "";
+    cell.classList.toggle('answered', !!answered);
+    cell.classList.toggle('flagged', !!flaggedQuestions[q.qNum]);
+  }
+
+  function highlightCurrentPaletteCell() {
+    document.querySelectorAll('.palette-cell').forEach(c => c.classList.remove('current'));
+    const cell = document.getElementById('palette-cell-' + currentIndex);
+    if (cell) cell.classList.add('current');
+    refreshPaletteCell(currentIndex);
+  }
+
+  function openPalette() { document.getElementById('palette-overlay').classList.add('active'); }
+  function closePalette() { document.getElementById('palette-overlay').classList.remove('active'); }
+
+  /* ================= Keyboard shortcuts ================= */
+  document.addEventListener('keydown', (e) => {
+    const examActive = document.getElementById('step-exam').classList.contains('active');
+    if (!examActive) return;
+    if (e.key === 'ArrowRight') nextQuestion();
+    if (e.key === 'ArrowLeft') prevQuestion();
+    if (e.key === 'Escape') closePalette();
+  });
+
+  /* ================= Nav buttons ================= */
+  function prevQuestion() {
+    if (currentIndex > 0) { currentIndex--; renderQuestion(); }
+  }
+
+  function nextQuestion() {
+    const q = questions[currentIndex];
+    const currentAnswer = userAnswers[q.qNum];
+    if (!currentAnswer || currentAnswer.toString().trim() === "") {
+      document.getElementById('exam-error').innerText = "Please answer this question before proceeding.";
+      document.getElementById('exam-error').style.display = 'block';
+      return;
+    }
+    if (currentIndex < questions.length - 1) { currentIndex++; renderQuestion(); }
+  }
+
+  function forceSubmit() {
+    deactivateExamSecurity();
+    const payload = buildPayload();
+    showStep('step-loading');
+    document.getElementById('loading-text').innerHTML = 'Submitting your exam<span class="dots"></span>';
+    google.script.run.withSuccessHandler(onSubmitted).withFailureHandler(onFailure).processSubmission(payload);
+  }
+
+  function submitExam() {
+    const q = questions[currentIndex];
+    const currentAnswer = userAnswers[q.qNum];
+    if (!currentAnswer || currentAnswer.toString().trim() === "") {
+      document.getElementById('exam-error').innerText = "Please answer this question before submitting.";
+      document.getElementById('exam-error').style.display = 'block';
+      return;
+    }
+    const confirmSubmit = confirm("Are you sure you want to submit the test?");
+    if (!confirmSubmit) return;
+    if (timerInterval) clearInterval(timerInterval);
+    deactivateExamSecurity();
+
+    showStep('step-loading');
+    document.getElementById('loading-text').innerHTML = 'Submitting your exam, saving data, and calculating results<span class="dots"></span>';
+
+    google.script.run
+      .withSuccessHandler(onSubmitted)
+      .withFailureHandler(onFailure)
+      .processSubmission(buildPayload());
+  }
+
+  function buildPayload() {
+    const elapsedMs = Date.now() - examStartTime;
+    const elapsedMinutes = Math.floor(elapsedMs / 60000);
+    const elapsedSeconds = Math.floor((elapsedMs % 60000) / 1000);
+    return {
+      name: studentData.name,
+      mobile: studentData.mobile,
+      email: studentData.email,
+      image: studentData.imageRaw,
+      answers: userAnswers,
+      flagged: Object.keys(flaggedQuestions).filter(k => flaggedQuestions[k]),
+      timeTaken: elapsedMinutes + "m " + elapsedSeconds + "s",
+      sessionId: examSessionId
+    };
+  }
+
+  /* ================= Results ================= */
+  let currentJobId = null;
+
+  function onSubmitted(result) {
+    if (result.status === "ERROR") {
+      alert("Error submitting exam: " + result.message);
+      showStep('step-exam');
+      return;
+    }
+
+    currentJobId = result.jobId || null;
+
+    document.getElementById('res-name').innerText = result.name;
+    document.getElementById('res-mobile').innerText = result.mobile;
+    document.getElementById('res-email').innerText = result.email || studentData.email || '—';
+    document.getElementById('res-total').innerText = result.totalQuestions;
+    document.getElementById('res-correct').innerText = result.correctAnswers;
+    document.getElementById('res-incorrect').innerText = result.incorrectAnswers;
+    document.getElementById('res-mcq-score').innerText = result.mcqScore + ' / ' + result.mcqMax;
+    document.getElementById('res-theory-count').innerText = result.theoryQuestionsCount;
+
+    const theoryPending = result.theoryEvaluationStatus !== 'SUCCESS';
+    document.getElementById('res-theory-score').innerText = theoryPending
+      ? (result.theoryQuestionsCount > 0 ? 'Pending' : '0 / 0')
+      : (result.theoryScore + ' / ' + result.theoryMax);
+    document.getElementById('res-score').innerText = theoryPending ? 'Pending' : (result.overallScore + ' / ' + result.overallMax);
+    document.getElementById('res-percentage-display').innerText = theoryPending ? 'Pending' : (result.percentage + '%');
+    document.getElementById('res-theory-pending-note').style.display = (theoryPending && result.theoryQuestionsCount > 0) ? 'block' : 'none';
+
+    document.getElementById('res-time').innerText = result.timeTaken || '—';
+    document.getElementById('res-grade').innerText = result.grade || '-';
+    document.getElementById('res-remarks').innerText = result.remarks || '';
+    document.getElementById('res-date').innerText = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    if (studentData.imageRaw) {
+      const photo = document.getElementById('res-photo');
+      photo.src = studentData.imageRaw;
+      photo.style.display = 'block';
+    }
+
+    const emailNote = document.getElementById('ms-email-note');
+    if (result.emailSent) {
+      emailNote.innerHTML = `<span class="ok">✓</span> Marksheet emailed to ${result.email}`;
+    } else if (result.emailError) {
+      emailNote.innerText = "Couldn't email the marksheet — you can screenshot this page instead.";
+    } else {
+      emailNote.innerText = '';
+    }
+
+    const statusPanel = document.getElementById('check-status-panel');
+    if (currentJobId) {
+      document.getElementById('res-jobid').innerText = currentJobId;
+      document.getElementById('check-status-msg').innerText = '';
+      statusPanel.style.display = 'block';
+    } else {
+      statusPanel.style.display = 'none';
+    }
+
+    showStep('step-result');
+    if ((parseFloat(result.percentage) || 0) >= 50) launchConfetti();
+  }
+
+  function onFailure(error) {
+    alert("An unexpected error occurred: " + error.toString());
+    showStep('step-exam');
+  }
+
+  /* ================= Check status (after Python + ChatGPT grading) ================= */
+  function checkStatus() {
+    if (!currentJobId) return;
+    const btn = document.getElementById('check-status-btn');
+    const msg = document.getElementById('check-status-msg');
+    btn.disabled = true;
+    msg.innerText = 'Checking...';
+    google.script.run
+      .withSuccessHandler(function(result) {
+        btn.disabled = false;
+        if (result.status === 'ERROR') {
+          msg.innerText = result.message || "Couldn't check status.";
+          return;
+        }
+        if (result.theoryEvaluationStatus === 'SUCCESS') {
+          msg.innerText = '✓ Final result loaded!';
+          onSubmitted(result);
+        } else if (result.theoryEvaluationStatus === 'ERROR') {
+          msg.innerText = 'AI grading hit an error — it will be retried automatically.';
+        } else {
+          msg.innerText = 'Still pending — check back again in a little while.';
+        }
+      })
+      .withFailureHandler(function(err) {
+        btn.disabled = false;
+        msg.innerText = "Couldn't check status: " + err.toString();
+      })
+      .checkResultStatus(currentJobId);
+  }
+
+  /* ================= Confetti ================= */
+  function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const colors = ['#4b8bd4', '#ffd43b', '#34d399', '#f87171', '#fff'];
+    const pieces = Array.from({ length: 130 }, () => ({
+      x: Math.random() * canvas.width,
+      y: -20 - Math.random() * canvas.height * 0.5,
+      size: 5 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      speedY: 2 + Math.random() * 3,
+      speedX: -1.5 + Math.random() * 3,
+      rotation: Math.random() * 360,
+      rotSpeed: -6 + Math.random() * 12
+    }));
+    let frame = 0;
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pieces.forEach(p => {
+        p.y += p.speedY;
+        p.x += p.speedX;
+        p.rotation += p.rotSpeed;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation * Math.PI / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.6);
+        ctx.restore();
+      });
+      frame++;
+      if (frame < 220) requestAnimationFrame(draw); else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    draw();
+  }
+
+  window.addEventListener('resize', () => {
+    const canvas = document.getElementById('confetti-canvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  });
+</script>
+
+
+  <!-- Camera permission explainer -->
+  <div id="camera-permission-modal"
+       style="display:none;position:fixed;inset:0;z-index:99999;
+              background:rgba(5,9,20,.78);backdrop-filter:blur(6px);
+              align-items:center;justify-content:center;padding:20px;">
+    <div style="width:100%;max-width:430px;background:#10182c;
+                border:1px solid rgba(255,255,255,.12);border-radius:16px;
+                padding:24px;box-shadow:0 25px 60px rgba(0,0,0,.45);">
+      <div style="font-size:30px;text-align:center;margin-bottom:8px;">📷</div>
+      <h2 style="margin:0 0 10px;color:#fff;text-align:center;">Camera access required</h2>
+      <p style="margin:0 0 18px;color:#b7c1d6;line-height:1.55;text-align:center;">
+        This exam uses your camera for face/attention monitoring.
+        Click <b>Continue</b>, then choose <b>Allow</b> when your browser
+        asks for camera access.
+      </p>
+      <div id="camera-permission-error"
+           style="display:none;color:#f87171;font-size:.85rem;margin-bottom:14px;
+                  text-align:center;font-family:var(--font-mono);"></div>
+      <button id="camera-permission-continue" class="btn" type="button">
+        Continue &amp; Allow Camera
+      </button>
+      <button id="camera-permission-cancel" class="btn btn-secondary"
+              type="button" style="margin-top:10px;">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+</body>
+</html>
