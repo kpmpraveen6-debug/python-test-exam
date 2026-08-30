@@ -898,7 +898,7 @@
   function callFrontendApi(action, args, onSuccess, onFailure) {
     fetch(FRONTEND_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain;charset=UTF-8" },
       body: JSON.stringify({
         action: action,
         args: Array.isArray(args) ? args : []
@@ -923,7 +923,12 @@
     })
     .catch(function(err) {
       console.error("[API]", action, err);
-      if (typeof onFailure === "function") onFailure(err);
+      const detail = new Error(
+        "API request failed for " + action + ": " +
+        (err && err.message ? err.message : String(err)) +
+        " (Worker: " + FRONTEND_API_URL + ")"
+      );
+      if (typeof onFailure === "function") onFailure(detail);
     });
   }
 
