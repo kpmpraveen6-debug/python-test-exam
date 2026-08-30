@@ -893,7 +893,7 @@
    *
    * Set this to your deployed Cloudflare Worker URL.
    */
-  const FRONTEND_API_URL = "https://python-test-api.kpmpraveen6.workers.dev";
+  const FRONTEND_API_URL = "https://YOUR-WORKER-NAME.YOUR-SUBDOMAIN.workers.dev";
 
   function callFrontendApi(action, args, onSuccess, onFailure) {
     fetch(FRONTEND_API_URL, {
@@ -1688,7 +1688,11 @@ function startCameraMonitoring() {
   }
 
   function onQuestionsLoaded(data) {
-    if (!data || data.length === 0) {
+    if (data && !Array.isArray(data) && data.status === 'ERROR') {
+      onFailure(data);
+      return;
+    }
+    if (!Array.isArray(data) || data.length === 0) {
       alert("No questions found in the Google Sheet. Please check the sheet configuration.");
       showStep('step-1');
       return;
