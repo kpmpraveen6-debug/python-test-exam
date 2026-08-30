@@ -1062,7 +1062,7 @@
   const BLACKOUT_ON_FACE_LOSS = true;
   const BLACKOUT_ON_LOOK_AWAY = true;                 // admin-configurable: true blocks exam start without a working camera
   const FACE_CHECK_INTERVAL_MS = 700;            // how often a frame is analyzed
-  const FACE_MISSING_WARNING_SECONDS = 3;        // no face detected, sustained
+  const FACE_MISSING_WARNING_SECONDS = 1;        // no face detected, sustained for 1 second
   const MULTIPLE_FACES_WARNING_SECONDS = 2;      // more than one face detected, sustained
   const EYES_CLOSED_WARNING_SECONDS = 3;         // per spec
   const LOOK_AWAY_WARNING_SECONDS = 3;           // per spec
@@ -1724,19 +1724,32 @@ function startCameraMonitoring() {
       google.script.run
         .withSuccessHandler(function (result) {
           if (result && result.status === 'SUCCESS') {
+            // A developer-mode transition starts a fresh security-warning
+            // counter. This prevents violations recorded before developer mode
+            // from carrying over and causing an immediate auto-submit after
+            // developer mode is turned off.
+            securityViolationCount = 0;
+            attentionWarningCount = 0;
+            lastViolationProcessedTime = 0;
+
+            if (violationBatchTimer) {
+              clearTimeout(violationBatchTimer);
+              violationBatchTimer = null;
+            }
+
             if (developerMode) {
               developerMode = false;
               developerCode = null;
               document.getElementById('dev-mode-badge').classList.remove('visible');
               document.getElementById('dev-reveal-btn').classList.remove('visible');
-              console.log('[dev mode] disabled');
-              showAttentionToast('Developer mode OFF');
+              console.log('[dev mode] disabled; security warning counter reset');
+              showAttentionToast('Developer mode OFF — warnings reset');
             } else {
               developerMode = true;
               developerCode = code;
               document.getElementById('dev-mode-badge').classList.add('visible');
               document.getElementById('dev-reveal-btn').classList.add('visible');
-              console.log('[dev mode] enabled');
+              console.log('[dev mode] enabled; security warning counter reset');
               showAttentionToast('Developer mode ON');
             }
           } else {
