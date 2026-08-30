@@ -2659,6 +2659,9 @@ function startCameraMonitoring() {
     document.getElementById('result-choice-panel').style.display = 'block';
   }
 
+  let submittedAnswersRetryCount = 0;
+  const MAX_SUBMITTED_ANSWERS_RETRIES = 3;
+
   function openSubmittedAnswers() {
     document.getElementById('result-choice-panel').style.display = 'none';
     document.getElementById('marksheet-panel').style.display = 'none';
@@ -2669,24 +2672,78 @@ function startCameraMonitoring() {
       return;
     }
 
+    submittedAnswersRetryCount = 0;
+    loadSubmittedAnswersWithRetry();
+  }
+
+  function loadSubmittedAnswersWithRetry() {
     const list = document.getElementById('submitted-answers-list');
-    list.innerHTML = '<div class="result-choice-msg visible pending">Loading your submitted answers...</div>';
+
+    if (!currentJobId) {
+      list.innerHTML =
+        '<div class="result-choice-msg visible pending">Result ID is missing. Please return to the result screen.</div>';
+      return;
+    }
+
+    const attempt = submittedAnswersRetryCount + 1;
+
+    list.innerHTML =
+      '<div class="result-choice-msg visible pending">' +
+      (attempt === 1
+        ? 'Loading your submitted answers...'
+        : 'Temporary server issue. Retrying (' + attempt + '/' + MAX_SUBMITTED_ANSWERS_RETRIES + ')...') +
+      '</div>';
 
     google.script.run
       .withSuccessHandler(function(result) {
-        if (!result || result.status !== 'SUCCESS') {
-          list.innerHTML = '<div class="result-choice-msg visible pending">Could not load answers: ' +
-            escapeHtml((result && result.message) || 'Unknown error.') + '</div>';
+        if (result && result.status === 'SUCCESS') {
+          submittedAnswersCache = result.answers || [];
+          renderSubmittedAnswers(submittedAnswersCache);
           return;
         }
-        submittedAnswersCache = result.answers || [];
-        renderSubmittedAnswers(submittedAnswersCache);
+
+        retrySubmittedAnswers(
+          (result && result.message) || 'Server could not load the submitted answers.'
+        );
       })
       .withFailureHandler(function(err) {
-        list.innerHTML = '<div class="result-choice-msg visible pending">Could not load answers: ' +
-          escapeHtml(err && err.toString ? err.toString() : String(err)) + '</div>';
+        retrySubmittedAnswers(
+          err && err.toString
+            ? err.toString()
+            : String(err)
+        );
       })
       .getSubmittedAnswers(currentJobId);
+  }
+
+  function retrySubmittedAnswers(reason) {
+    if (submittedAnswersRetryCount < MAX_SUBMITTED_ANSWERS_RETRIES - 1) {
+      submittedAnswersRetryCount++;
+
+      const list = document.getElementById('submitted-answers-list');
+      list.innerHTML =
+        '<div class="result-choice-msg visible pending">' +
+        'Temporary connection/server issue. Retrying automatically...<br>' +
+        '<span style="opacity:.7;">' +
+        escapeHtml(reason || '') +
+        '</span></div>';
+
+      setTimeout(loadSubmittedAnswersWithRetry, 1200);
+      return;
+    }
+
+    const list = document.getElementById('submitted-answers-list');
+    list.innerHTML =
+      '<div class="result-choice-msg visible pending">' +
+      'Could not load your answers right now. Please click ' +
+      '<button class="btn btn-secondary" type="button" ' +
+      'style="width:auto;padding:7px 12px;margin-left:4px;" ' +
+      'onclick="submittedAnswersRetryCount=0;loadSubmittedAnswersWithRetry();">' +
+      'Try Again' +
+      '</button>' +
+      '<div style="margin-top:8px;opacity:.7;">' +
+      escapeHtml(reason || '') +
+      '</div></div>';
   }
 
   function renderSubmittedAnswers(answers) {
