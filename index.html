@@ -2499,7 +2499,7 @@ function startCameraMonitoring() {
 
   function onQuestionsLoaded(data) {
     if (data && !Array.isArray(data) && data.status === 'ERROR') {
-      onFailure(data);
+      onFailure(new Error(data.message || 'Could not load questions.'));
       return;
     }
     if (!Array.isArray(data) || data.length === 0) {
@@ -2551,6 +2551,38 @@ function startCameraMonitoring() {
   }
 
   /* ================= Rendering ================= */
+  function parseOptions(optionsTypeStr) {
+    if (!optionsTypeStr) return [];
+    return optionsTypeStr
+      .split('\n')
+      .map(function(s) { return s.trim(); })
+      .filter(function(s) { return s.length > 0; });
+  }
+
+  function getShuffledOptions(q) {
+    if (!q || (q.optionsType || '').trim() === 'Theory question') {
+      return [];
+    }
+
+    const key = q.qNum || ('index_' + currentIndex);
+
+    if (shuffledOptionsByQuestion[key]) {
+      return shuffledOptionsByQuestion[key].slice();
+    }
+
+    const options = parseOptions(q.optionsType);
+
+    for (let i = options.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = options[i];
+      options[i] = options[j];
+      options[j] = t;
+    }
+
+    shuffledOptionsByQuestion[key] = options.slice();
+    return options;
+  }
+
   function renderQuestion() {
     document.getElementById('exam-error').style.display = 'none';
 
