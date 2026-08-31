@@ -16,20 +16,28 @@
     :root {
       --bg-deep: #0a0f1e;
       --bg-deep-2: #10182c;
-      --glass: rgba(255,255,255,0.055);
-      --glass-border: rgba(255,255,255,0.10);
-      --glass-strong: rgba(255,255,255,0.09);
+      --glass: rgba(255,255,255,0.06);
+      --glass-border: rgba(255,255,255,0.12);
+      --glass-strong: rgba(255,255,255,0.10);
       --py-blue: #4b8bd4;
       --py-blue-dim: #2d5c8a;
       --py-yellow: #ffd43b;
-      --text: #e7ecf5;
-      --text-dim: #93a0bb;
+      --text: #eef2fa;
+      --text-dim: #97a4c0;
       --success: #34d399;
       --error: #f87171;
-      --radius: 18px;
+      --radius: 20px;
       --font-display: 'Space Grotesk', sans-serif;
       --font-body: 'Inter', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
+
+      /* official / certificate accent palette — used by the marksheet + polish */
+      --navy: #0f1f3d;
+      --navy-2: #12244a;
+      --gold: #c9a24b;
+      --gold-light: #ffd94d;
+      --cert-paper: #fffdf8;
+      --cert-paper-2: #f4f1e8;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -40,6 +48,8 @@
       background: var(--bg-deep);
       color: var(--text);
       overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
 
     body {
@@ -58,8 +68,9 @@
       inset: 0;
       z-index: 0;
       background:
-        radial-gradient(ellipse 900px 600px at 15% 10%, rgba(75,139,212,0.20), transparent 60%),
-        radial-gradient(ellipse 800px 700px at 90% 85%, rgba(255,212,59,0.10), transparent 55%),
+        radial-gradient(ellipse 1000px 650px at 12% 8%, rgba(75,139,212,0.22), transparent 60%),
+        radial-gradient(ellipse 850px 750px at 92% 88%, rgba(255,212,59,0.11), transparent 55%),
+        radial-gradient(ellipse 700px 500px at 50% 100%, rgba(201,162,75,0.08), transparent 60%),
         linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-deep-2) 100%);
     }
 
@@ -93,16 +104,16 @@
     .container {
       position: relative;
       width: 100%;
-      background: var(--glass);
+      background: linear-gradient(165deg, var(--glass-strong), var(--glass) 60%);
       border: 1px solid var(--glass-border);
-      backdrop-filter: blur(18px) saturate(140%);
-      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      backdrop-filter: blur(20px) saturate(150%);
+      -webkit-backdrop-filter: blur(20px) saturate(150%);
       border-radius: var(--radius);
-      padding: 32px;
+      padding: 34px;
       box-shadow:
-        0 30px 60px -20px rgba(0,0,0,0.6),
-        0 0 0 1px rgba(255,255,255,0.02) inset,
-        0 1px 0 rgba(255,255,255,0.08) inset;
+        0 40px 80px -24px rgba(0,0,0,0.65),
+        0 0 0 1px rgba(255,255,255,0.03) inset,
+        0 1px 0 rgba(255,255,255,0.10) inset;
       transform: translateZ(0);
       animation: rise 0.7s cubic-bezier(0.16,1,0.3,1);
     }
@@ -117,8 +128,17 @@
       position: absolute;
       top: -1px; left: 20px; right: 20px;
       height: 1px;
-      background: linear-gradient(90deg, transparent, var(--py-yellow), var(--py-blue), transparent);
-      opacity: 0.6;
+      background: linear-gradient(90deg, transparent, var(--gold-light), var(--py-blue), transparent);
+      opacity: 0.7;
+    }
+
+    .container::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(201,162,75,0.08) inset;
     }
 
     /* ---------- Top chrome ---------- */
@@ -131,13 +151,14 @@
     .eyebrow {
       font-family: var(--font-mono);
       font-size: 0.72rem;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--py-yellow);
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
+      font-weight: 600;
     }
     .eyebrow::before { content: ">"; color: var(--py-blue); }
 
@@ -153,12 +174,12 @@
       font-family: var(--font-display);
       margin-bottom: 10px;
       color: #fff;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.015em;
     }
-    h1 { font-size: 1.7rem; }
-    h2 { font-size: 1.45rem; }
+    h1 { font-size: 1.85rem; }
+    h2 { font-size: 1.5rem; }
 
-    p.subtext { margin-bottom: 22px; color: var(--text-dim); line-height: 1.55; font-size: 0.95rem; }
+    p.subtext { margin-bottom: 24px; color: var(--text-dim); line-height: 1.6; font-size: 0.96rem; }
 
     .form-group { margin-bottom: 18px; }
 
@@ -176,14 +197,15 @@
     input[type="tel"],
     textarea {
       width: 100%;
-      padding: 13px 14px;
-      background: rgba(255,255,255,0.04);
+      padding: 14px 15px;
+      background: rgba(255,255,255,0.045);
       border: 1px solid var(--glass-border);
-      border-radius: 10px;
+      border-radius: 11px;
       font-size: 1rem;
       color: var(--text);
       outline: none;
       font-family: var(--font-body);
+      box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset;
       transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
     }
     input[type="text"]::placeholder, textarea::placeholder { color: #5c6a87; }
@@ -219,22 +241,24 @@
     .btn {
       background: linear-gradient(135deg, var(--py-blue), var(--py-blue-dim));
       color: #fff;
-      border: none;
-      padding: 14px 24px;
-      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 15px 24px;
+      border-radius: 11px;
       font-size: 0.98rem;
-      font-weight: 600;
+      font-weight: 700;
+      letter-spacing: 0.01em;
       font-family: var(--font-body);
       cursor: pointer;
       width: 100%;
       position: relative;
       overflow: hidden;
       transform: translateY(0) translateZ(0);
-      box-shadow: 0 6px 18px -6px rgba(75,139,212,0.55), 0 1px 0 rgba(255,255,255,0.15) inset;
+      box-shadow: 0 8px 22px -6px rgba(75,139,212,0.55), 0 1px 0 rgba(255,255,255,0.18) inset;
       transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
     }
-    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -6px rgba(75,139,212,0.65), 0 1px 0 rgba(255,255,255,0.15) inset; filter: brightness(1.08); }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 14px 28px -6px rgba(75,139,212,0.7), 0 1px 0 rgba(255,255,255,0.18) inset; filter: brightness(1.08); }
     .btn:active { transform: translateY(0px) scale(0.98); }
+    .btn:disabled { cursor: not-allowed; filter: grayscale(0.3); }
     .btn::after {
       content: ""; position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
       background: linear-gradient(115deg, transparent, rgba(255,255,255,0.35), transparent);
@@ -276,15 +300,16 @@
     /* ---------- Progress ring / bar ---------- */
     .progress-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
     .progress-bar-track {
-      flex: 1; height: 8px; border-radius: 6px; background: rgba(255,255,255,0.07);
+      flex: 1; height: 9px; border-radius: 6px; background: rgba(255,255,255,0.07);
       overflow: hidden; position: relative;
+      box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
     }
     .progress-bar-fill {
       height: 100%; border-radius: 6px;
-      background: linear-gradient(90deg, var(--py-blue), var(--py-yellow));
+      background: linear-gradient(90deg, var(--py-blue), var(--gold-light));
       width: 0%;
       transition: width 0.4s cubic-bezier(0.16,1,0.3,1);
-      box-shadow: 0 0 12px rgba(75,139,212,0.6);
+      box-shadow: 0 0 14px rgba(75,139,212,0.65);
     }
     .timer-pill {
       font-family: var(--font-mono);
@@ -329,17 +354,17 @@
     .option-item {
       display: flex;
       align-items: flex-start;
-      padding: 14px;
+      padding: 15px 16px;
       border: 1px solid var(--glass-border);
-      background: rgba(255,255,255,0.02);
-      border-radius: 10px;
+      background: rgba(255,255,255,0.025);
+      border-radius: 12px;
       margin-bottom: 10px;
       cursor: pointer;
-      transition: background-color 0.18s, border-color 0.18s, transform 0.15s;
+      transition: background-color 0.18s, border-color 0.18s, transform 0.15s, box-shadow 0.18s;
       transform-style: preserve-3d;
     }
     .option-item:hover { background-color: rgba(75,139,212,0.09); border-color: var(--py-blue-dim); transform: translateX(4px); }
-    .option-item.selected { border-color: var(--py-blue); background: rgba(75,139,212,0.14); box-shadow: 0 0 0 1px var(--py-blue) inset; }
+    .option-item.selected { border-color: var(--py-blue); background: rgba(75,139,212,0.16); box-shadow: 0 0 0 1px var(--py-blue) inset, 0 6px 16px -8px rgba(75,139,212,0.6); }
 
     .option-item input[type="radio"] {
       margin-top: 3px;
@@ -673,30 +698,96 @@
     #photo-validation-status.bad { color: var(--error); }
     #photo-validation-status.checking { color: var(--py-yellow); }
 
-    #result-choice-panel {
-      width: 100%;
+    #result-choice-panel { width: 100%; }
+
+    /* ---------- Stable landscape exam layout ---------- */
+    #step-exam { width: 100%; }
+    #step-exam .q-title,
+    #step-exam #q-container { width: 100%; }
+
+    #step-exam .q-title {
+      min-height: 96px;
+      max-height: 170px;
+      overflow-y: auto;
+      display: flex;
+      align-items: flex-start;
+      padding-right: 6px;
     }
+
+    #step-exam #q-container {
+      min-height: 300px;
+    }
+
+    #step-exam .option-item {
+      min-height: 58px;
+      align-items: center;
+    }
+
+    #step-exam textarea {
+      min-height: 230px;
+    }
+
+    @media (min-width: 900px) {
+      body {
+        align-items: flex-start;
+        padding: 18px 20px;
+      }
+
+      .stage { max-width: 1280px; }
+
+      .container {
+        padding: 26px 32px;
+      }
+
+      #step-exam #q-container {
+        min-height: 400px;
+      }
+
+      #step-exam .q-title {
+        min-height: 92px;
+      }
+
+      #step-exam .option-item {
+        min-height: 62px;
+      }
+    }
+
+    @media (min-width: 1500px) {
+      .stage { max-width: 1380px; }
+    }
+
+    @media (max-width: 899px) {
+      .stage { max-width: 100%; }
+      #step-exam #q-container { min-height: 245px; }
+    }
+
+    /* ---------- Clean result summary ---------- */
     .result-summary-table-wrap {
       border: 1px solid var(--glass-border);
       border-radius: 14px;
       overflow: hidden;
-      background: rgba(255,255,255,0.035);
+      background: linear-gradient(165deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
       margin-top: 16px;
+      box-shadow: 0 18px 40px -22px rgba(0,0,0,0.55);
     }
     .result-summary-table {
       width: 100%;
       border-collapse: collapse;
+      table-layout: fixed;
     }
     .result-summary-table th,
     .result-summary-table td {
-      padding: 11px 13px;
-      border-top: 1px solid rgba(255,255,255,0.07);
-      font-size: .88rem;
+      padding: 12px 15px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      vertical-align: middle;
+      word-break: break-word;
+      transition: background-color .15s ease;
     }
     .result-summary-table tr:first-child th,
-    .result-summary-table tr:first-child td {
-      border-top: none;
-    }
+    .result-summary-table tr:first-child td { border-top: none; }
+    .result-summary-table tr:nth-child(even) { background: rgba(255,255,255,0.018); }
+    .result-summary-table tr:hover th,
+    .result-summary-table tr:hover td { background-color: rgba(75,139,212,0.08); }
     .result-summary-table th {
       width: 52%;
       text-align: left;
@@ -704,244 +795,241 @@
       font-family: var(--font-mono);
       font-size: .72rem;
       font-weight: 600;
+      letter-spacing: .02em;
     }
     .result-summary-table td {
+      width: 48%;
       text-align: right;
       color: var(--text);
+      font-size: .92rem;
       font-weight: 700;
-      word-break: break-word;
+      font-family: var(--font-display);
     }
     .result-summary-table .summary-strong th,
     .result-summary-table .summary-strong td {
-      background: rgba(75,139,212,.10);
+      background: linear-gradient(90deg, rgba(75,139,212,.16), rgba(255,212,59,.08));
       color: #fff;
-      font-size: .94rem;
     }
+    .result-summary-table .summary-strong td { font-size: 1.05rem; }
     .summary-good { color: var(--success) !important; }
     .summary-bad { color: var(--error) !important; }
-
-    .result-actions {
+.result-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-top: 16px;
+      gap: 12px;
+      margin-top: 14px;
     }
     .result-action-btn {
       appearance: none;
       border: 1px solid var(--glass-border);
       border-radius: 14px;
-      background: rgba(255,255,255,0.04);
+      background: linear-gradient(165deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02));
       color: var(--text);
-      padding: 17px;
+      padding: 16px 17px;
       text-align: left;
       cursor: pointer;
-      transition: transform .15s ease, background .2s ease, border-color .2s ease, opacity .2s ease;
+      position: relative;
+      overflow: hidden;
+      transition: background .18s ease, border-color .18s ease, transform .12s ease, opacity .18s ease, box-shadow .18s ease;
     }
     .result-action-btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      background: rgba(255,255,255,.07);
+      background: rgba(75,139,212,.09);
       border-color: var(--py-blue);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 26px -14px rgba(75,139,212,0.7);
     }
-    .result-action-btn:disabled {
-      cursor: not-allowed;
-      opacity: .42;
-    }
-    .result-action-icon {
-      display: block;
-      font-size: 1.55rem;
-      margin-bottom: 8px;
-    }
-    .result-action-title {
+    .result-action-btn:disabled { opacity: .42; cursor: not-allowed; }
+.result-action-title {
       display: block;
       font-family: var(--font-display);
       font-weight: 700;
-      font-size: 1rem;
+      font-size: 1.02rem;
       margin-bottom: 5px;
     }
     .result-action-sub {
       display: block;
       color: var(--text-dim);
-      font-size: .78rem;
+      font-size: .77rem;
       line-height: 1.45;
     }
+    .result-choice-msg {
+      margin-top: 12px;
+      padding: 9px 11px;
+      border-radius: 9px;
+      display: none;
+      font-family: var(--font-mono);
+      font-size: .76rem;
+      line-height: 1.45;
+    }
+    .result-choice-msg.visible { display: block; }
+    .result-choice-msg.pending {
+      color: #7a5a10;
+      background: #fff8e1;
+      border: 1px solid #e8c874;
+    }
+
+    /* ---------- Clean final marksheet ---------- */
     .marksheet-close-btn {
       position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      border: 1px solid rgba(15,31,61,.22);
+      top: 10px;
+      right: 10px;
+      width: 36px;
+      height: 36px;
+      border-radius: 7px;
+      border: 1px solid #ccd2da;
       background: #fff;
-      color: #0f1f3d;
+      color: #263247;
       cursor: pointer;
-      font-size: 1rem;
+      font-size: 16px;
       font-weight: 700;
       z-index: 5;
-      box-shadow: 0 4px 12px rgba(0,0,0,.12);
     }
-    .marksheet-close-btn:hover { background: #f3f0e8; }
-
+    .marksheet-close-btn:hover { background: #f3f5f7; }
     .final-marksheet {
-      background: #fffdf8;
-      border: 2px solid #0f1f3d;
-      border-radius: 14px;
-      padding: 28px 22px 22px;
-      margin-top: 4px;
-      color: #24324d;
-      box-shadow: 0 18px 45px rgba(0,0,0,.22);
+      background: #fff;
+      border: 1px solid #d6dae1;
+      border-radius: 12px;
+      padding: 34px 28px 26px;
+      color: #1e293b;
+      box-shadow: 0 14px 34px rgba(0,0,0,.18);
     }
-    .marksheet-header { text-align: center; margin-bottom: 18px; }
+    .marksheet-header {
+      text-align: center;
+      border-bottom: 2px solid #203a67;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
     .marksheet-kicker {
-      color: #7a6a3a;
+      color: #5a6678;
       font-family: var(--font-mono);
-      font-size: .72rem;
-      letter-spacing: .15em;
+      font-size: .68rem;
+      letter-spacing: .14em;
       font-weight: 700;
-      margin-bottom: 6px;
+      text-transform: uppercase;
+      margin-bottom: 5px;
     }
-    .marksheet-header h2 { color: #0f1f3d; margin-bottom: 8px; }
-    .marksheet-line {
-      width: 120px;
-      height: 2px;
-      margin: 0 auto;
-      background: #c9a24b;
+    .marksheet-header h2 {
+      color: #17253d;
+      margin: 0;
+      font-size: 1.35rem;
     }
+    .marksheet-line { display: none; }
     .final-ms-table {
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid #d9d1ba;
-      border-radius: 10px;
-      overflow: hidden;
+      table-layout: fixed;
+      border: 1px solid #d5dae2;
     }
     .final-ms-table th,
     .final-ms-table td {
-      padding: 11px 12px;
-      border-top: 1px solid #ece5d2;
-      font-size: .88rem;
-      vertical-align: top;
+      padding: 10px 12px;
+      border-top: 1px solid #e5e8ed;
+      vertical-align: middle;
+      word-break: break-word;
+      font-size: .86rem;
     }
     .final-ms-table tr:first-child th,
     .final-ms-table tr:first-child td { border-top: none; }
     .final-ms-table th {
-      width: 52%;
+      width: 50%;
       text-align: left;
-      background: #f8f4e9;
+      background: #f5f7fa;
+      color: #526074;
       font-weight: 700;
     }
     .final-ms-table td {
+      width: 50%;
       text-align: right;
+      color: #17253d;
       font-weight: 700;
-      color: #0f1f3d;
-      word-break: break-word;
     }
     .final-ms-table .ms-highlight-row th,
     .final-ms-table .ms-highlight-row td {
-      background: #eef4fc;
-      font-size: .96rem;
+      background: #eaf0f8;
+      color: #10294d;
+      font-size: .94rem;
     }
     .final-ms-table .ms-good { color: #16845b; }
     .final-ms-table .ms-bad { color: #c8392b; }
     .marksheet-pending-note {
-      margin-top: 14px;
-      padding: 11px 12px;
-      border-radius: 10px;
-      border: 1px solid #e8c874;
-      background: #fff8e1;
-      color: #7a5a10;
-      font-size: .8rem;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid #e4c56f;
+      border-radius: 8px;
+      background: #fff9e9;
+      color: #765d16;
+      font-size: .78rem;
       line-height: 1.5;
     }
-    .marksheet-signoff {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      margin-top: 16px;
-      padding-top: 12px;
-      border-top: 1px solid #d9d1ba;
-      color: #6d6b66;
+    .marksheet-signoff { display: none; }
+    .ms-email-note {
+      margin-top: 12px;
+      text-align: center;
       font-family: var(--font-mono);
-      font-size: .7rem;
+      font-size: .72rem;
+      color: #6b7280;
     }
 
-    /* Review mode: same exam screen, but completely read-only. */
+    /* Review mode is read-only and uses the same exam layout. */
     #step-exam.review-mode .timer-pill,
     #step-exam.review-mode #flag-btn,
     #step-exam.review-mode #btn-submit,
     #step-exam.review-mode #network-status,
     #step-exam.review-mode #monitor-video,
     #step-exam.review-mode #monitor-status,
-    #step-exam.review-mode #attention-toast {
-      display: none !important;
-    }
-    #step-exam.review-mode .top-actions .theme-toggle { display: none; }
+    #step-exam.review-mode #attention-toast { display: none !important; }
+    #step-exam.review-mode .review-banner { display: block; }
     .review-banner {
       display: none;
-      margin: 0 0 16px;
-      padding: 10px 12px;
+      margin: 0 0 12px;
+      padding: 9px 11px;
       border: 1px solid var(--py-blue);
-      border-radius: 10px;
-      background: rgba(75,139,212,.10);
+      border-radius: 8px;
+      background: rgba(75,139,212,.08);
       color: var(--text);
       font-family: var(--font-mono);
-      font-size: .76rem;
+      font-size: .72rem;
       line-height: 1.45;
     }
-    #step-exam.review-mode .review-banner { display: block; }
     .review-answer-panel {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: 10px;
+      margin-top: 10px;
+      padding: 11px 12px;
       border: 1px solid rgba(255,255,255,.09);
-      background: rgba(255,255,255,.035);
+      border-radius: 8px;
+      background: rgba(255,255,255,.03);
     }
     .review-answer-label {
       font-family: var(--font-mono);
-      font-size: .68rem;
-      letter-spacing: .06em;
+      font-size: .66rem;
       text-transform: uppercase;
+      letter-spacing: .05em;
       color: var(--text-dim);
-      margin-bottom: 5px;
+      margin-bottom: 4px;
     }
     .review-answer-value {
       white-space: pre-wrap;
       line-height: 1.5;
       color: var(--text);
-      font-size: .9rem;
+      font-size: .86rem;
     }
-    .review-correct-option {
-      border-color: var(--success) !important;
-      background: rgba(52,211,153,.10) !important;
-    }
-    .review-student-option {
-      border-color: var(--py-blue) !important;
-      background: rgba(75,139,212,.12) !important;
-    }
-    .review-wrong-option {
-      border-color: var(--error) !important;
-      background: rgba(248,113,113,.08) !important;
-    }
+    .review-correct-option { border-color: var(--success) !important; background: rgba(52,211,153,.09) !important; }
+    .review-wrong-option { border-color: var(--error) !important; background: rgba(248,113,113,.08) !important; }
     .review-option-badge {
       margin-left: auto;
-      padding: 2px 6px;
-      border-radius: 999px;
       font-family: var(--font-mono);
-      font-size: .62rem;
+      font-size: .6rem;
       font-weight: 700;
       white-space: nowrap;
     }
-    .review-option-badge.correct { color: var(--success); }
-    .review-option-badge.wrong { color: var(--error); }
-    .review-theory-model {
-      border-left: 3px solid var(--success);
-      padding-left: 12px;
-    }
-    .review-theory-feedback {
-      border-left: 3px solid var(--py-yellow);
-      padding-left: 12px;
-    }
-    .review-back-btn {
-      margin-top: 16px;
+    .review-option-badge.correct { color: #16845b; }
+    .review-option-badge.wrong { color: #c8392b; }
+    .review-theory-model { border-left: 3px solid #16845b; }
+    .review-theory-feedback { border-left: 3px solid #c9a24b; }
+
+    @media (max-width: 700px) {
+      .result-actions { grid-template-columns: 1fr; }
+      .final-marksheet { padding: 30px 12px 18px; }
+      .final-ms-table th, .final-ms-table td { padding: 9px 8px; font-size: .8rem; }
     }
 
 #network-status {
@@ -1232,13 +1320,11 @@
 
         <div class="result-actions">
           <button class="result-action-btn" id="view-marksheet-btn" type="button" onclick="openMarksheet()">
-            <span class="result-action-icon">📜</span>
             <span class="result-action-title">View Marksheet</span>
             <span class="result-action-sub" id="marksheet-choice-status">Waiting for AI correction.</span>
           </button>
 
           <button class="result-action-btn" id="view-answers-btn" type="button" onclick="openSubmittedAnswers()">
-            <span class="result-action-icon">📝</span>
             <span class="result-action-title">View Answers</span>
             <span class="result-action-sub">Open your exam again in answer-review mode.</span>
           </button>
@@ -1253,18 +1339,17 @@
         </div>
       </div>
 
-      <!-- Full updated marksheet -->
+      <!-- Full updated marksheet — styled as an official gold/navy certificate -->
       <div id="marksheet-panel" style="display:none; position:relative;">
         <button type="button"
                 class="marksheet-close-btn"
                 aria-label="Close marksheet"
-                onclick="closeMarksheet()">✕</button>
+                onclick="closeMarksheet()">X</button>
 
         <div class="final-marksheet">
           <div class="marksheet-header">
             <div class="marksheet-kicker">OFFICIAL RESULT</div>
             <h2>Python Test Marksheet</h2>
-            <div class="marksheet-line"></div>
           </div>
 
           <table class="final-ms-table">
@@ -1277,7 +1362,7 @@
               <tr><th>Incorrect Answers</th><td id="final-res-incorrect" class="ms-bad"></td></tr>
               <tr><th>MCQ Score</th><td id="final-res-mcq-score"></td></tr>
               <tr><th>Theory Questions</th><td id="final-res-theory-count"></td></tr>
-              <tr><th>Theory Marks (AI Evaluated)</th><td id="final-res-theory-score"></td></tr>
+              <tr><th>Theory Marks</th><td id="final-res-theory-score"></td></tr>
               <tr class="ms-highlight-row"><th>Total Score</th><td id="final-res-score"></td></tr>
               <tr class="ms-highlight-row"><th>Percentage</th><td id="final-res-percentage"></td></tr>
               <tr><th>Grade</th><td id="final-res-grade"></td></tr>
@@ -1288,15 +1373,14 @@
             </tbody>
           </table>
 
-          <div class="marksheet-pending-note" id="final-ms-pending" style="display:none;">
-            ⏳ AI correction is still pending.
+          <div id="final-ms-pending"
+               class="marksheet-pending-note"
+               style="display:none;">
+            AI correction is still pending.
           </div>
 
-          <div class="marksheet-signoff">
-            <span>Official Exam Result</span>
-            <span>Python Test Portal</span>
-          </div>
-          <div class="ms-email-note" id="ms-email-note"></div>
+          <div class="ms-email-note"
+               id="ms-email-note"></div>
         </div>
       </div>
 
@@ -1331,41 +1415,78 @@
    */
   const FRONTEND_API_URL = "https://python-test-api.kpmpraveen6.workers.dev";
 
-  function callFrontendApi(action, args, onSuccess, onFailure) {
-    fetch(FRONTEND_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=UTF-8" },
-      body: JSON.stringify({
-        action: action,
-        args: Array.isArray(args) ? args : []
+  function callFrontendApi(action, args, onSuccess, onFailure, options) {
+    const opts = options || {};
+    const maxRetries = Number.isInteger(opts.maxRetries)
+      ? Math.max(0, opts.maxRetries)
+      : 2;
+    const retryDelay = Number(opts.retryDelayMs || 900);
+    let attempt = 0;
+
+    function run() {
+      attempt++;
+
+      fetch(FRONTEND_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
+        cache: "no-store",
+        body: JSON.stringify({
+          action: action,
+          args: Array.isArray(args) ? args : []
+        })
       })
-    })
-    .then(function(response) {
-      return response.text().then(function(raw) {
-        let data;
-        try {
-          data = JSON.parse(raw);
-        } catch (parseErr) {
-          throw new Error("Backend returned invalid JSON: " + raw.slice(0, 300));
+      .then(function(response) {
+        return response.text().then(function(raw) {
+          let data;
+
+          try {
+            data = JSON.parse(raw);
+          } catch (parseErr) {
+            const err = new Error(
+              "Backend returned invalid JSON: " + raw.slice(0, 240)
+            );
+            err.retryable = true;
+            throw err;
+          }
+
+          if (!response.ok) {
+            const err = new Error(
+              data && data.message
+                ? data.message
+                : ("HTTP " + response.status)
+            );
+            err.retryable =
+              response.status >= 500 ||
+              response.status === 408 ||
+              response.status === 429;
+            throw err;
+          }
+
+          return data;
+        });
+      })
+      .then(function(data) {
+        if (typeof onSuccess === "function") onSuccess(data);
+      })
+      .catch(function(err) {
+        if (err && err.retryable !== false && attempt <= maxRetries) {
+          setTimeout(run, retryDelay * attempt);
+          return;
         }
-        if (!response.ok) {
-          throw new Error(data && data.message ? data.message : ("HTTP " + response.status));
+
+        console.error("[API]", action, err);
+
+        if (typeof onFailure === "function") {
+          onFailure(new Error(
+            "API request failed for " + action + ": " +
+            (err && err.message ? err.message : String(err)) +
+            " (Worker: " + FRONTEND_API_URL + ")"
+          ));
         }
-        return data;
       });
-    })
-    .then(function(data) {
-      if (typeof onSuccess === "function") onSuccess(data);
-    })
-    .catch(function(err) {
-      console.error("[API]", action, err);
-      const detail = new Error(
-        "API request failed for " + action + ": " +
-        (err && err.message ? err.message : String(err)) +
-        " (Worker: " + FRONTEND_API_URL + ")"
-      );
-      if (typeof onFailure === "function") onFailure(detail);
-    });
+    }
+
+    run();
   }
 
   function createScriptRunProxy(successHandler, failureHandler) {
@@ -1381,19 +1502,25 @@
     return new Proxy(base, {
       get: function(target, property) {
         if (property in target) return target[property];
+
         return function() {
+          const action = String(property);
+
           return callFrontendApi(
-            String(property),
+            action,
             Array.prototype.slice.call(arguments),
             successHandler,
-            failureHandler
+            failureHandler,
+            {
+              maxRetries: action === "getDeveloperAnswers" ? 3 : 2,
+              retryDelayMs: action === "getDeveloperAnswers" ? 700 : 900
+            }
           );
         };
       }
     });
   }
 
-  // Preserve the existing google.script.run calls in the exam code.
   window.google = window.google || {};
   window.google.script = window.google.script || {};
   window.google.script.run = createScriptRunProxy(null, null);
@@ -2305,6 +2432,7 @@ function startCameraMonitoring() {
             if (developerMode) {
               developerMode = false;
               developerCode = null;
+              developerAnswerCache = null;
               document.getElementById('dev-mode-badge').classList.remove('visible');
               document.getElementById('dev-reveal-btn').classList.remove('visible');
               console.log('[dev mode] disabled; security warning counter reset');
@@ -2312,6 +2440,7 @@ function startCameraMonitoring() {
             } else {
               developerMode = true;
               developerCode = code;
+              developerAnswerCache = null;
               document.getElementById('dev-mode-badge').classList.add('visible');
               document.getElementById('dev-reveal-btn').classList.add('visible');
               console.log('[dev mode] enabled; security warning counter reset');
@@ -2326,42 +2455,162 @@ function startCameraMonitoring() {
     }
   });
 
+  let developerAnswerCache = null;
+  let developerAnswerRetryCount = 0;
+  const MAX_DEVELOPER_ANSWER_RETRIES = 3;
+
   function revealDeveloperAnswers() {
     if (!developerMode || !developerCode) return;
-    google.script.run
-      .withSuccessHandler(function (result) {
-        if (!result || result.status !== 'SUCCESS') {
-          alert('Could not load answers: ' + (result && result.message));
+
+    if (developerAnswerCache) {
+      applyDeveloperAnswerForCurrentQuestion(developerAnswerCache);
+      return;
+    }
+
+    developerAnswerRetryCount = 0;
+    requestDeveloperAnswers();
+  }
+
+  function requestDeveloperAnswers() {
+    if (!developerMode || !developerCode) return;
+
+    callFrontendApi(
+      "getDeveloperAnswers",
+      [developerCode],
+      function(result) {
+        if (!result || result.status !== "SUCCESS") {
+          retryDeveloperAnswers(
+            (result && result.message) ||
+            "The answer service returned an error."
+          );
           return;
         }
-        const byQNum = {};
-        result.answers.forEach(function (a) { byQNum[a.qNum] = a; });
 
-        const q = questions[currentIndex];
-        if (!q) return;
-        const answer = byQNum[q.qNum];
-        if (!answer) return;
+        developerAnswerCache = {};
+        (result.answers || []).forEach(function(a) {
+          developerAnswerCache[a.qNum] = a;
+        });
 
-        if (answer.optionsType && answer.optionsType.trim() === 'Theory question') {
-          const textarea = document.querySelector('#q-container textarea');
-          if (textarea) {
-            textarea.value = answer.correctAnswer;
-            userAnswers[q.qNum] = answer.correctAnswer;
-            updateProgress();
-            refreshPaletteCell(currentIndex);
-          }
-        } else {
-          const radios = document.querySelectorAll('#q-container input[type="radio"]');
-          radios.forEach(function (radio) {
-            if (radio.value === answer.correctAnswer) {
-              radio.checked = true;
-              radio.dispatchEvent(new Event('change'));
-            }
-          });
-        }
-      })
-      .withFailureHandler(function () { alert('Could not load answers (server error).'); })
-      .getDeveloperAnswers(developerCode);
+        applyDeveloperAnswerForCurrentQuestion(
+          developerAnswerCache
+        );
+      },
+      function(error) {
+        retryDeveloperAnswers(
+          error && error.message
+            ? error.message
+            : String(error)
+        );
+      },
+      {
+        maxRetries: 0,
+        retryDelayMs: 700
+      }
+    );
+  }
+
+  function applyDeveloperAnswerForCurrentQuestion(byQNum) {
+    if (!developerMode || !developerCode) return;
+
+    const q = questions[currentIndex];
+    if (!q) return;
+
+    const answer = byQNum[q.qNum];
+
+    if (!answer) {
+      showAttentionToast(
+        "No answer key found for this question."
+      );
+      return;
+    }
+
+    const correctAnswer =
+      answer.correctAnswer || "";
+
+    if (
+      (answer.optionsType || "").trim() ===
+      "Theory question"
+    ) {
+      const textarea =
+        document.querySelector(
+          "#q-container textarea"
+        );
+
+      if (!textarea) {
+        showAttentionToast(
+          "Theory answer box is not ready yet."
+        );
+        return;
+      }
+
+      textarea.value = correctAnswer;
+      userAnswers[q.qNum] = correctAnswer;
+
+      updateProgress();
+      refreshPaletteCell(currentIndex);
+
+      showAttentionToast(
+        "Developer answer inserted."
+      );
+      return;
+    }
+
+    const radios =
+      document.querySelectorAll(
+        "#q-container input[type='radio']"
+      );
+
+    let matched = false;
+
+    radios.forEach(function(radio) {
+      if (radio.value === correctAnswer) {
+        radio.checked = true;
+        radio.dispatchEvent(
+          new Event("change", { bubbles: true })
+        );
+        matched = true;
+      }
+    });
+
+    showAttentionToast(
+      matched
+        ? "Developer answer inserted."
+        : "Correct MCQ option not found."
+    );
+  }
+
+  function retryDeveloperAnswers(reason) {
+    if (!developerMode || !developerCode) return;
+
+    if (
+      developerAnswerRetryCount <
+      MAX_DEVELOPER_ANSWER_RETRIES - 1
+    ) {
+      developerAnswerRetryCount++;
+
+      showAttentionToast(
+        "Developer answer service retrying (" +
+        (developerAnswerRetryCount + 1) +
+        "/" +
+        MAX_DEVELOPER_ANSWER_RETRIES +
+        ")"
+      );
+
+      setTimeout(
+        requestDeveloperAnswers,
+        700
+      );
+      return;
+    }
+
+    console.error(
+      "[DEV ANSWERS]",
+      reason
+    );
+
+    showAttentionToast(
+      "Developer answer service unavailable. Try again."
+    );
   }
 
   /* ================= Navigation helpers ================= */
@@ -2817,7 +3066,7 @@ function startCameraMonitoring() {
   /* ================= Keyboard shortcuts ================= */
   document.addEventListener('keydown', (e) => {
     const examActive = document.getElementById('step-exam').classList.contains('active');
-    if (!examActive) return;
+    if (!examActive && !reviewMode) return;
     if (e.key === 'ArrowRight') nextQuestion();
     if (e.key === 'ArrowLeft') prevQuestion();
     if (e.key === 'Escape') closePalette();
@@ -3102,54 +3351,52 @@ function startCameraMonitoring() {
     }
 
     submittedAnswersRetryCount = 0;
-    loadSubmittedAnswersWithRetry(true);
+    loadSubmittedAnswersWithRetry();
   }
 
-  function loadSubmittedAnswersWithRetry(openReviewAfterLoad) {
+  function loadSubmittedAnswersWithRetry() {
     if (!currentJobId) {
-      alert('Result ID is missing. Please return to the result screen.');
+      showAttentionToast("Result ID is missing.");
       return;
     }
 
-    const attempt = submittedAnswersRetryCount + 1;
-
-    google.script.run
-      .withSuccessHandler(function(result) {
-        if (result && result.status === 'SUCCESS') {
-          submittedAnswersCache = result.answers || [];
-
-          if (openReviewAfterLoad) {
-            enterReviewMode(submittedAnswersCache);
-          }
+    callFrontendApi(
+      "getSubmittedAnswers",
+      [currentJobId],
+      function(result) {
+        if (!result || result.status !== "SUCCESS") {
+          retrySubmittedAnswers(
+            (result && result.message) ||
+            "Could not load submitted answers."
+          );
           return;
         }
 
+        submittedAnswersCache = result.answers || [];
+        enterReviewMode(submittedAnswersCache);
+      },
+      function(err) {
         retrySubmittedAnswers(
-          (result && result.message) ||
-          'Server could not load the submitted answers.'
+          err && err.message ? err.message : String(err)
         );
-      })
-      .withFailureHandler(function(err) {
-        retrySubmittedAnswers(
-          err && err.toString ? err.toString() : String(err)
-        );
-      })
-      .getSubmittedAnswers(currentJobId);
+      },
+      {
+        maxRetries: 2,
+        retryDelayMs: 900
+      }
+    );
   }
 
   function retrySubmittedAnswers(reason) {
     if (submittedAnswersRetryCount < MAX_SUBMITTED_ANSWERS_RETRIES - 1) {
       submittedAnswersRetryCount++;
-
-      setTimeout(function() {
-        loadSubmittedAnswersWithRetry(true);
-      }, 1200);
-
+      setTimeout(loadSubmittedAnswersWithRetry, 1000);
       return;
     }
 
-    alert(
-      'Could not load your answers right now. Please try again.'
+    console.error("[ANSWER REVIEW]", reason);
+    showAttentionToast(
+      "Could not load answers. Please try again."
     );
   }
 
@@ -3168,38 +3415,45 @@ function startCameraMonitoring() {
     btn.disabled = true;
     msg.innerText = 'Checking...';
 
-    google.script.run
-      .withSuccessHandler(function(result) {
+    callFrontendApi(
+      "checkResultStatus",
+      [currentJobId],
+      function(result) {
         btn.disabled = false;
 
-        if (!result || result.status === 'ERROR') {
+        if (!result || result.status === "ERROR") {
           msg.innerText =
-            (result && result.message) || "Couldn't check status.";
+            (result && result.message) ||
+            "Could not check status.";
           return;
         }
 
-        if (result.theoryEvaluationStatus === 'SUCCESS') {
+        if (result.theoryEvaluationStatus === "SUCCESS") {
           marksheetPending = false;
           submittedAnswersCache = null;
-
           populateResultFields(result);
-
           msg.innerText =
-            '✓ AI correction complete. Your updated marksheet is ready.';
-        } else if (result.theoryEvaluationStatus === 'ERROR') {
+            "AI correction complete. Your updated marksheet is ready.";
+        } else if (result.theoryEvaluationStatus === "ERROR") {
           msg.innerText =
-            'AI grading hit an error — it will be retried automatically.';
+            "AI grading hit an error. Please check again later.";
         } else {
           msg.innerText =
-            'Still waiting for AI correction. Please check again later.';
+            "Still waiting for AI correction. Please check again later.";
         }
-      })
-      .withFailureHandler(function(err) {
+      },
+      function(err) {
         btn.disabled = false;
         msg.innerText =
-          "Couldn't check status: " + err.toString();
-      })
-      .checkResultStatus(currentJobId);
+          err && err.message
+            ? err.message
+            : "Could not check status.";
+      },
+      {
+        maxRetries: 2,
+        retryDelayMs: 900
+      }
+    );
   }
 
   /* ================= Confetti ================= */
