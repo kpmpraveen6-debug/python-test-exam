@@ -473,6 +473,12 @@
       margin: -8px -8px 0;
       box-shadow: 0 30px 70px -25px rgba(0,0,0,0.55);
       animation: certRise 0.7s cubic-bezier(0.16,1,0.3,1);
+      transition: transform .25s ease, box-shadow .25s ease;
+      transform-style: preserve-3d;
+    }
+    .marksheet-wrap:hover {
+      transform: translateY(-4px) rotateX(1deg) rotateY(-0.6deg);
+      box-shadow: 0 40px 90px -28px rgba(0,0,0,0.6);
     }
     @keyframes certRise { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
@@ -490,6 +496,28 @@
       border: 1.5px solid #c9a24b;
       border-radius: 6px;
       pointer-events: none;
+      z-index: 2;
+    }
+    .marksheet::after {
+      content: "🎓";
+      position: absolute;
+      right: -30px; bottom: -40px;
+      font-size: 12rem;
+      opacity: 0.045;
+      transform: rotate(-12deg);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .ms-letterhead {
+      position: relative; z-index: 1;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 0.66rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: #9c8a55;
+      font-weight: 700;
+      margin-bottom: 10px;
     }
     .ms-content { position: relative; z-index: 1; }
 
@@ -870,7 +898,55 @@
       font-size: .77rem;
       line-height: 1.45;
     }
-    .result-choice-msg {
+    /* ---------- "Test Submitted Successfully" — 3D success badge ---------- */
+    .submit-success-badge {
+      position: relative;
+      width: 84px; height: 84px;
+      margin: 4px auto 14px;
+      display: flex; align-items: center; justify-content: center;
+      animation: successPop .7s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    @keyframes successPop {
+      0%   { opacity: 0; transform: scale(0.4) rotateY(-40deg); }
+      60%  { opacity: 1; transform: scale(1.08) rotateY(10deg); }
+      100% { opacity: 1; transform: scale(1) rotateY(0deg); }
+    }
+    .ssb-ring {
+      position: absolute; inset: 0;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, var(--py-blue), var(--gold-light), var(--py-blue));
+      -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+              mask: radial-gradient(farthest-side, transparent calc(100% - 4px), #000 calc(100% - 4px));
+      animation: successRingSpin 5s linear infinite;
+      box-shadow: 0 10px 26px -8px rgba(75,139,212,0.6);
+    }
+    @keyframes successRingSpin { to { transform: rotate(360deg); } }
+    .ssb-check {
+      position: relative;
+      width: 66px; height: 66px;
+      border-radius: 50%;
+      background: linear-gradient(155deg, #1d8f63, #0f6247);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.9rem;
+      font-weight: 800;
+      box-shadow: 0 8px 20px -6px rgba(16,120,80,0.7), 0 0 0 4px rgba(10,15,30,1);
+    }
+    .submit-success-divider {
+      width: 120px; margin: 6px auto 16px; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-light), var(--py-blue), transparent);
+      opacity: .7;
+    }
+
+    /* Subtle interactive 3D tilt on the summary card when hovered */
+    .result-summary-table-wrap {
+      transition: transform .25s ease, box-shadow .25s ease;
+      transform-style: preserve-3d;
+    }
+    .result-summary-table-wrap:hover {
+      transform: translateY(-3px) rotateX(1.2deg);
+      box-shadow: 0 26px 50px -22px rgba(75,139,212,0.35);
+    }
       margin-top: 12px;
       padding: 9px 11px;
       border-radius: 9px;
@@ -1266,9 +1342,14 @@
 
       <!-- Result summary table + two actions -->
       <div id="result-choice-panel" class="result-choice-panel">
-        <div class="eyebrow">submission_complete</div>
-        <h2>Test Submitted Successfully</h2>
-        <p class="subtext">Your result is saved. Review the result below or view your submitted answers.</p>
+        <div class="submit-success-badge">
+          <span class="ssb-ring"></span>
+          <span class="ssb-check">✓</span>
+        </div>
+        <div class="eyebrow" style="justify-content:center;">submission_complete</div>
+        <h2 style="text-align:center;">Test Submitted Successfully</h2>
+        <div class="submit-success-divider"></div>
+        <p class="subtext" style="text-align:center;">Your result is saved. Review the result below or view your submitted answers.</p>
 
         <div class="result-summary-table-wrap">
           <table class="result-summary-table">
@@ -1375,6 +1456,7 @@
           <div class="marksheet">
             <div class="ms-content">
 
+              <div class="ms-letterhead">Python Test Portal &nbsp;·&nbsp; Official Result</div>
               <div class="ms-crest">🎓</div>
               <div class="ms-title">Test Completed</div>
               <div class="ms-divider"></div>
@@ -1423,7 +1505,7 @@
                   <div class="r-text" id="final-res-remarks"></div>
                 </div>
                 <div class="ms-sign">
-                  <div class="s-script">Verified</div>
+                  <div class="s-script">Praveen Kumar.S</div>
                   <div class="s-line"></div>
                   <div class="s-label">Authorized Signature</div>
                 </div>
