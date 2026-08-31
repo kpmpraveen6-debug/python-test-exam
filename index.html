@@ -465,509 +465,472 @@
     .loader .dots::after { content: ''; animation: dotting 1.4s steps(4,end) infinite; }
     @keyframes dotting { 0%,20% { content:''; } 40% { content:'.'; } 60% { content:'..'; } 80%,100% { content:'...'; } }
 
-    /* ---------- Results: Certificate Marksheet ---------- */
-    .marksheet-wrap {
-      background: linear-gradient(180deg, #fbfaf6 0%, #f4f1e8 100%);
-      border-radius: 16px;
-      padding: 10px;
-      margin: -8px -8px 0;
-      box-shadow: 0 30px 70px -25px rgba(0,0,0,0.55);
-      animation: certRise 0.7s cubic-bezier(0.16,1,0.3,1);
-    }
-    @keyframes certRise { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    /* ---------- Final marksheet: reference-style ---------- */
+    #marksheet-panel { width: 100%; }
 
-    .marksheet {
-      position: relative;
-      border: 3px solid #0f1f3d;
-      border-radius: 10px;
-      padding: 30px 22px 24px;
-      background: #fffdf8;
-      overflow: hidden;
-    }
-    .marksheet::before {
-      content: "";
-      position: absolute; inset: 8px;
-      border: 1.5px solid #c9a24b;
-      border-radius: 6px;
-      pointer-events: none;
-    }
-    .ms-content { position: relative; z-index: 1; }
-
-    .ms-crest {
-      width: 70px; height: 70px; margin: 0 auto 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 2.1rem;
-      background: linear-gradient(160deg, #12244a, #0b1730);
-      border: 2px solid #c9a24b;
-      border-radius: 50% 50% 46% 46% / 55% 55% 45% 45%;
-      color: #ffd94d;
-      box-shadow: 0 8px 18px -6px rgba(15,31,61,0.4);
-      animation: crestPop 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both;
-    }
-    @keyframes crestPop { from { opacity: 0; transform: scale(0.5) rotate(-8deg); } to { opacity: 1; transform: scale(1) rotate(0deg); } }
-
-    .ms-title {
-      font-family: 'Playfair Display', serif;
-      font-weight: 800;
-      font-size: 1.55rem;
-      text-align: center;
-      color: #0f1f3d;
-      letter-spacing: 0.04em;
-      margin-bottom: 6px;
-    }
-    .ms-divider {
-      width: 70%; margin: 0 auto 14px; height: 1px;
-      background: linear-gradient(90deg, transparent, #c9a24b, transparent);
-      position: relative;
-    }
-    .ms-divider::after { content: "❖"; position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: #fffdf8; padding: 0 8px; color: #c9a24b; font-size: 0.7rem; }
-
-    .ms-ribbon {
-      display: block; margin: 0 auto 18px; width: fit-content;
-      background: linear-gradient(160deg, #12244a, #0b1730);
-      color: #fff; font-family: var(--font-display); font-weight: 700;
-      font-size: 0.95rem; letter-spacing: 0.12em; text-transform: uppercase;
-      padding: 8px 26px; clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
-      border: 1px solid #c9a24b;
-    }
-
-    .ms-info {
-      display: flex; align-items: center; gap: 14px; justify-content: space-between;
-      border: 1.5px solid #dcd3ba; border-radius: 10px; padding: 14px;
-      margin-bottom: 16px; background: #fffefb;
-    }
-    .ms-info-rows { flex: 1; min-width: 0; }
-    .ms-info-row { display: flex; gap: 6px; margin-bottom: 6px; font-size: 0.88rem; color: #33415e; }
-    .ms-info-row:last-child { margin-bottom: 0; }
-    .ms-info-row b { color: #0f1f3d; font-weight: 700; word-break: break-word; }
-    .ms-photo {
-      width: 66px; height: 82px; border-radius: 6px; object-fit: cover; flex-shrink: 0;
-      border: 1.5px solid #0f1f3d; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-
-    .ms-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; border-radius: 8px; overflow: hidden; border: 1.5px solid #dcd3ba; }
-    .ms-table thead th {
-      background: linear-gradient(160deg, #12244a, #0b1730); color: #fff;
-      font-family: var(--font-display); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
-      padding: 10px 12px; text-align: left;
-    }
-    .ms-table tbody td { padding: 10px 12px; font-size: 0.9rem; color: #33415e; border-top: 1px solid #ece5d2; }
-    .ms-table tbody tr:nth-child(even) { background: #fbf8f0; }
-    .ms-table .ms-val { font-family: var(--font-display); font-weight: 700; color: #0f1f3d; text-align: right; }
-    .ms-val.correct { color: #1a9c6b; }
-    .ms-val.incorrect { color: #c8392b; }
-
-    .ms-footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-top: 6px; }
-    .ms-grade-badge {
-      width: 78px; height: 78px; border-radius: 50%;
-      background: linear-gradient(160deg, #12244a, #0b1730);
-      border: 3px solid #c9a24b;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      color: #fff; position: relative; flex-shrink: 0;
-      animation: badgeSpin 0.7s cubic-bezier(0.16,1,0.3,1) 0.25s both;
-    }
-    @keyframes badgeSpin { from { opacity: 0; transform: rotate(-25deg) scale(0.6); } to { opacity: 1; transform: rotate(0) scale(1); } }
-    .ms-grade-badge .g-label { font-size: 0.55rem; letter-spacing: 0.1em; text-transform: uppercase; color: #ffd94d; }
-    .ms-grade-badge .g-letter { font-family: 'Playfair Display', serif; font-weight: 800; font-size: 1.6rem; line-height: 1; }
-    .ms-grade-badge::after {
-      content: ""; position: absolute; bottom: -14px; left: 50%; transform: translateX(-50%);
-      border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 14px solid #0f1f3d;
-    }
-
-    .ms-remarks { flex: 1; min-width: 160px; border: 1px solid #dcd3ba; border-radius: 8px; padding: 10px 12px; background: #fffefb; }
-    .ms-remarks .r-title { font-family: var(--font-display); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #12244a; font-weight: 700; margin-bottom: 4px; }
-    .ms-remarks .r-text { font-size: 0.83rem; color: #46536e; font-style: italic; line-height: 1.4; }
-
-    .ms-sign { text-align: center; flex-shrink: 0; }
-    .ms-sign .s-script { font-family: 'Playfair Display', serif; font-style: italic; font-size: 1.25rem; color: #12244a; }
-    .ms-sign .s-line { width: 100px; border-top: 1px solid #33415e; margin: 4px 0; }
-    .ms-sign .s-label { font-size: 0.68rem; color: #6b7690; letter-spacing: 0.04em; }
-
-    .ms-tagline { text-align: center; margin-top: 18px; font-family: 'Playfair Display', serif; font-style: italic; color: #7a6a3a; font-size: 0.8rem; }
-
-    .ms-email-note {
-      margin-top: 14px; text-align: center; font-family: var(--font-mono); font-size: 0.78rem;
-      color: var(--text-dim);
-    }
-    .ms-email-note .ok { color: var(--success); }
-
-    #confetti-canvas { position: fixed; inset: 0; z-index: 5; pointer-events: none; }
-
-    /* ---------- Exam security (deterrent-only, see JS comments) ---------- */
-    /* Disables easy text selection/copying during the exam. Inputs and the
-       theory-answer textarea are explicitly excluded so students can still
-       type and edit their own answers normally -- this does not interfere
-       with normal typing, screen readers, or accessibility tools. */
-    body.exam-security-active {
-      user-select: none;
-      -webkit-user-select: none;
-      -ms-user-select: none;
-    }
-    body.exam-security-active textarea,
-    body.exam-security-active input {
-      user-select: text;
-      -webkit-user-select: text;
-    }
-
-    /* ---------- NEW: Camera / attention monitoring UI (CHANGE 3, 4, 5) ---------- */
-    /* The video element is only used as a source frame for face-api.js; it's
-       tucked into a small corner thumbnail rather than hidden entirely so the
-       student can see they're on camera (transparency, not covert monitoring). */
-    #monitor-video {
-      position: fixed;
-      bottom: 14px;
-      right: 14px;
-      width: 84px;
-      height: 63px;
-      border-radius: 8px;
-      object-fit: cover;
-      border: 2px solid var(--glass-border);
-      z-index: 40;
-      background: #000;
-      display: none;
-      pointer-events: none; /* never intercept taps on controls beneath it, even on narrow screens */
-      transform: scaleX(-1); /* mirror, feels natural like a selfie camera */
-    }
-    #monitor-video.visible { display: block; }
-
-    #monitor-status {
-      position: fixed;
-      bottom: 82px;
-      right: 14px;
-      z-index: 40;
-      font-family: var(--font-mono);
-      font-size: 0.72rem;
-      padding: 6px 10px;
-      border-radius: 20px;
-      border: 1px solid var(--glass-border);
-      background: rgba(10,15,30,0.85);
-      color: var(--text);
-      display: none;
-      white-space: nowrap;
-      pointer-events: none;
-      box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-    }
-    #monitor-status.visible { display: block; }
-    #monitor-status.status-ok { border-color: var(--success); }
-    #monitor-status.status-warn { border-color: var(--py-yellow); color: var(--py-yellow); }
-    #monitor-status.status-bad { border-color: var(--error); color: var(--error); }
-
-    #face-blackout {
-      position: fixed;
-      inset: 0;
-      z-index: 100000;
-      display: none;
-      background: #000;
-      color: #fff;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 24px;
-    }
-    #face-blackout.visible { display: flex; }
-    .face-blackout-panel {
-      width: min(92vw, 460px);
-      padding: 28px;
-      border: 1px solid rgba(255,255,255,0.16);
-      border-radius: 16px;
-      background: #050505;
-      box-shadow: 0 18px 50px rgba(0,0,0,0.75);
-      font-family: var(--font-body);
-    }
-    .face-blackout-icon { font-size: 2.2rem; margin-bottom: 10px; }
-    #face-blackout-title {
-      font-family: var(--font-display);
-      font-size: 1.35rem;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    #face-blackout-message {
-      color: #c8c8c8;
-      line-height: 1.55;
-      font-size: 0.95rem;
-    }
-    #photo-validation-status {
-      margin-top: 8px;
-      font-family: var(--font-mono);
-      font-size: 0.78rem;
-      line-height: 1.4;
-      display: none;
-    }
-    #photo-validation-status.visible { display: block; }
-    #photo-validation-status.ok { color: var(--success); }
-    #photo-validation-status.bad { color: var(--error); }
-    #photo-validation-status.checking { color: var(--py-yellow); }
-
-    #result-choice-panel { width: 100%; }
-
-    /* ---------- Stable landscape exam layout ---------- */
-    #step-exam { width: 100%; }
-    #step-exam .q-title,
-    #step-exam #q-container { width: 100%; }
-
-    #step-exam .q-title {
-      min-height: 96px;
-      max-height: 170px;
-      overflow-y: auto;
-      display: flex;
-      align-items: flex-start;
-      padding-right: 6px;
-    }
-
-    #step-exam #q-container {
-      min-height: 300px;
-    }
-
-    #step-exam .option-item {
-      min-height: 58px;
-      align-items: center;
-    }
-
-    #step-exam textarea {
-      min-height: 230px;
-    }
-
-    @media (min-width: 900px) {
-      body {
-        align-items: flex-start;
-        padding: 18px 20px;
-      }
-
-      .stage { max-width: 1280px; }
-
-      .container {
-        padding: 26px 32px;
-      }
-
-      #step-exam #q-container {
-        min-height: 400px;
-      }
-
-      #step-exam .q-title {
-        min-height: 92px;
-      }
-
-      #step-exam .option-item {
-        min-height: 62px;
-      }
-    }
-
-    @media (min-width: 1500px) {
-      .stage { max-width: 1380px; }
-    }
-
-    @media (max-width: 899px) {
-      .stage { max-width: 100%; }
-      #step-exam #q-container { min-height: 245px; }
-    }
-
-    /* ---------- Clean result summary ---------- */
-    .result-summary-table-wrap {
-      border: 1px solid var(--glass-border);
-      border-radius: 14px;
-      overflow: hidden;
-      background: linear-gradient(165deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
-      margin-top: 16px;
-      box-shadow: 0 18px 40px -22px rgba(0,0,0,0.55);
-    }
-    .result-summary-table {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-    .result-summary-table th,
-    .result-summary-table td {
-      padding: 12px 15px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-      vertical-align: middle;
-      word-break: break-word;
-      transition: background-color .15s ease;
-    }
-    .result-summary-table tr:first-child th,
-    .result-summary-table tr:first-child td { border-top: none; }
-    .result-summary-table tr:nth-child(even) { background: rgba(255,255,255,0.018); }
-    .result-summary-table tr:hover th,
-    .result-summary-table tr:hover td { background-color: rgba(75,139,212,0.08); }
-    .result-summary-table th {
-      width: 52%;
-      text-align: left;
-      color: var(--text-dim);
-      font-family: var(--font-mono);
-      font-size: .72rem;
-      font-weight: 600;
-      letter-spacing: .02em;
-    }
-    .result-summary-table td {
-      width: 48%;
-      text-align: right;
-      color: var(--text);
-      font-size: .92rem;
-      font-weight: 700;
-      font-family: var(--font-display);
-    }
-    .result-summary-table .summary-strong th,
-    .result-summary-table .summary-strong td {
-      background: linear-gradient(90deg, rgba(75,139,212,.16), rgba(255,212,59,.08));
-      color: #fff;
-    }
-    .result-summary-table .summary-strong td { font-size: 1.05rem; }
-    .summary-good { color: var(--success) !important; }
-    .summary-bad { color: var(--error) !important; }
-.result-actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-top: 14px;
-    }
-    .result-action-btn {
-      appearance: none;
-      border: 1px solid var(--glass-border);
-      border-radius: 14px;
-      background: linear-gradient(165deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02));
-      color: var(--text);
-      padding: 16px 17px;
-      text-align: left;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-      transition: background .18s ease, border-color .18s ease, transform .12s ease, opacity .18s ease, box-shadow .18s ease;
-    }
-    .result-action-btn:hover:not(:disabled) {
-      background: rgba(75,139,212,.09);
-      border-color: var(--py-blue);
-      transform: translateY(-2px);
-      box-shadow: 0 12px 26px -14px rgba(75,139,212,0.7);
-    }
-    .result-action-btn:disabled { opacity: .42; cursor: not-allowed; }
-.result-action-title {
-      display: block;
-      font-family: var(--font-display);
-      font-weight: 700;
-      font-size: 1.02rem;
-      margin-bottom: 5px;
-    }
-    .result-action-sub {
-      display: block;
-      color: var(--text-dim);
-      font-size: .77rem;
-      line-height: 1.45;
-    }
-    .result-choice-msg {
-      margin-top: 12px;
-      padding: 9px 11px;
-      border-radius: 9px;
-      display: none;
-      font-family: var(--font-mono);
-      font-size: .76rem;
-      line-height: 1.45;
-    }
-    .result-choice-msg.visible { display: block; }
-    .result-choice-msg.pending {
-      color: #7a5a10;
-      background: #fff8e1;
-      border: 1px solid #e8c874;
-    }
-
-    /* ---------- Clean final marksheet ---------- */
     .marksheet-close-btn {
       position: absolute;
-      top: 10px;
-      right: 10px;
-      width: 36px;
-      height: 36px;
-      border-radius: 7px;
-      border: 1px solid #ccd2da;
+      top: 12px;
+      right: 12px;
+      width: 38px;
+      height: 38px;
+      border-radius: 6px;
+      border: 1px solid #d6dbe2;
       background: #fff;
-      color: #263247;
-      cursor: pointer;
-      font-size: 16px;
-      font-weight: 700;
-      z-index: 5;
-    }
-    .marksheet-close-btn:hover { background: #f3f5f7; }
-    .final-marksheet {
-      background: #fff;
-      border: 1px solid #d6dae1;
-      border-radius: 12px;
-      padding: 34px 28px 26px;
-      color: #1e293b;
-      box-shadow: 0 14px 34px rgba(0,0,0,.18);
-    }
-    .marksheet-header {
-      text-align: center;
-      border-bottom: 2px solid #203a67;
-      padding-bottom: 14px;
-      margin-bottom: 18px;
-    }
-    .marksheet-kicker {
-      color: #5a6678;
-      font-family: var(--font-mono);
-      font-size: .68rem;
-      letter-spacing: .14em;
-      font-weight: 700;
-      text-transform: uppercase;
-      margin-bottom: 5px;
-    }
-    .marksheet-header h2 {
       color: #17253d;
-      margin: 0;
-      font-size: 1.35rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 800;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      box-shadow: 0 4px 10px rgba(0,0,0,.16);
     }
-    .marksheet-line { display: none; }
-    .final-ms-table {
+    .marksheet-close-btn:hover { background: #f3f5f8; }
+
+    .reference-marksheet {
+      padding: 8px;
+      background: #0d2a57;
+      box-shadow: 0 22px 60px rgba(0,0,0,.28);
+    }
+
+    .reference-inner {
+      position: relative;
+      background: #fff;
+      border: 3px solid #c6922d;
+      outline: 1px solid #173865;
+      outline-offset: -10px;
+      padding: 52px 38px 28px;
+      overflow: hidden;
+      color: #17253d;
+    }
+
+    .reference-inner::before,
+    .reference-inner::after {
+      content: "";
+      position: absolute;
+      width: 58px;
+      height: 58px;
+      border: 3px solid #c6922d;
+      pointer-events: none;
+    }
+    .reference-inner::before {
+      top: 8px;
+      left: 8px;
+      border-right: none;
+      border-bottom: none;
+      border-radius: 24px 0 0 0;
+    }
+    .reference-inner::after {
+      right: 8px;
+      bottom: 8px;
+      border-left: none;
+      border-top: none;
+      border-radius: 0 0 24px 0;
+    }
+
+    .ms-crest-wrap {
+      position: relative;
+      width: 175px;
+      height: 158px;
+      margin: 0 auto 4px;
+    }
+
+    .ms-crest-svg {
+      position: absolute;
+      width: 118px;
+      height: 138px;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      z-index: 2;
+    }
+
+    .ms-laurel {
+      position: absolute;
+      width: 62px;
+      height: 126px;
+      top: 28px;
+      z-index: 1;
+    }
+    .ms-laurel.left { left: 3px; }
+    .ms-laurel.right { right: 3px; }
+
+    .ms-big-title {
+      text-align: center;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(2rem, 4.8vw, 3.4rem);
+      line-height: 1.02;
+      letter-spacing: .05em;
+      font-weight: 800;
+      color: #14325f;
+      margin: 0;
+      white-space: nowrap;
+    }
+
+    .ms-title-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      margin: 12px auto 17px;
+      max-width: 82%;
+    }
+    .ms-title-rule span {
+      flex: 1;
+      height: 2px;
+      background: #c6922d;
+    }
+    .ms-title-rule i {
+      width: 15px;
+      height: 15px;
+      border: 2px solid #c6922d;
+      transform: rotate(45deg);
+      background: #fff;
+      display: block;
+    }
+
+    .ms-ribbon-clean {
+      width: min(440px, 80%);
+      margin: 0 auto 24px;
+      padding: 11px 26px;
+      background: #173865;
+      color: #fff;
+      border: 2px solid #c6922d;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      position: relative;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.05rem, 2.4vw, 1.52rem);
+      letter-spacing: .06em;
+      box-shadow: 0 6px 12px rgba(0,0,0,.12);
+    }
+    .ms-ribbon-clean::before,
+    .ms-ribbon-clean::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 24px;
+      background: #173865;
+      border-top: 2px solid #c6922d;
+      border-bottom: 2px solid #c6922d;
+    }
+    .ms-ribbon-clean::before {
+      left: -17px;
+      clip-path: polygon(100% 0, 0 50%, 100% 100%);
+    }
+    .ms-ribbon-clean::after {
+      right: -17px;
+      clip-path: polygon(0 0, 100% 50%, 0 100%);
+    }
+    .star-mark { color: #efbd42; }
+
+    .ms-student-panel {
+      display: grid;
+      grid-template-columns: 1fr 156px;
+      gap: 24px;
+      align-items: center;
+      border: 2px solid #173865;
+      border-radius: 18px;
+      padding: 17px 17px 17px 22px;
+      margin-bottom: 22px;
+      background: #fff;
+    }
+
+    .ms-student-details {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .ms-detail-row {
+      display: grid;
+      grid-template-columns: 28px minmax(120px, .85fr) 16px minmax(0, 1.4fr);
+      gap: 8px;
+      align-items: center;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(.88rem, 1.7vw, 1.05rem);
+    }
+
+    .ms-detail-icon {
+      width: 28px;
+      height: 28px;
+      color: #173865;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .ms-detail-icon svg { width: 24px; height: 24px; }
+    .ms-detail-label { color: #26364e; font-weight: 700; }
+    .ms-detail-colon { text-align: center; color: #26364e; font-weight: 700; }
+    .ms-detail-row strong {
+      color: #153a6b;
+      font-weight: 800;
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+
+    .ms-photo-box {
+      width: 144px;
+      height: 176px;
+      justify-self: end;
+      border: 2px solid #173865;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #eef1f5;
+    }
+    .ms-photo-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .reference-ms-table {
       width: 100%;
       border-collapse: collapse;
       table-layout: fixed;
-      border: 1px solid #d5dae2;
+      border: 1px solid #adb8c5;
+      margin-bottom: 24px;
+      font-family: Georgia, "Times New Roman", serif;
     }
-    .final-ms-table th,
-    .final-ms-table td {
+    .reference-ms-table thead th {
+      background: #0f315f;
+      color: #fff;
       padding: 10px 12px;
-      border-top: 1px solid #e5e8ed;
+      font-size: clamp(.88rem, 1.9vw, 1.08rem);
+      text-align: center;
+      letter-spacing: .04em;
+      font-weight: 800;
+    }
+    .reference-ms-table thead th:first-child {
+      border-right: 1px solid #fff;
+    }
+    .reference-ms-table tbody td {
+      padding: 9px 12px;
+      border-top: 1px solid #c5ccd5;
+      font-size: clamp(.79rem, 1.65vw, .96rem);
       vertical-align: middle;
-      word-break: break-word;
-      font-size: .86rem;
+      background: #fff;
     }
-    .final-ms-table tr:first-child th,
-    .final-ms-table tr:first-child td { border-top: none; }
-    .final-ms-table th {
-      width: 50%;
+    .reference-ms-table tbody tr:nth-child(even) td { background: #fbfcfd; }
+    .reference-ms-table tbody td:first-child {
+      width: 56%;
       text-align: left;
-      background: #f5f7fa;
-      color: #526074;
-      font-weight: 700;
+      border-right: 1px solid #c5ccd5;
+      font-weight: 600;
     }
-    .final-ms-table td {
-      width: 50%;
-      text-align: right;
-      color: #17253d;
-      font-weight: 700;
+    .reference-ms-table tbody td:last-child {
+      width: 44%;
+      text-align: center;
+      font-weight: 800;
+      color: #173865;
     }
-    .final-ms-table .ms-highlight-row th,
-    .final-ms-table .ms-highlight-row td {
-      background: #eaf0f8;
-      color: #10294d;
-      font-size: .94rem;
+    .reference-ms-table .score-row td {
+      background: #edf3fa !important;
+      color: #12345f;
+      font-weight: 800;
     }
-    .final-ms-table .ms-good { color: #16845b; }
-    .final-ms-table .ms-bad { color: #c8392b; }
-    .marksheet-pending-note {
-      margin-top: 12px;
-      padding: 10px 12px;
-      border: 1px solid #e4c56f;
-      border-radius: 8px;
-      background: #fff9e9;
-      color: #765d16;
-      font-size: .78rem;
+
+    .row-icon {
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 8px;
+      vertical-align: middle;
+      font-family: Arial, sans-serif;
+      font-weight: 900;
+      border-radius: 50%;
+    }
+    .row-icon.slate { color: #173865; }
+    .row-icon.green { color: #21a253; font-size: 1.2rem; }
+    .row-icon.red { color: #dc2f2f; font-size: 1.45rem; }
+    .row-icon.gold { color: #e0a726; font-size: 1.2rem; }
+    .row-icon.blue { color: #245f9f; }
+    .row-icon.purple {
+      color: #6d4bb0;
+      border: 2px solid #6d4bb0;
+      font-size: .58rem;
+    }
+
+    .ms-bottom-grid {
+      display: grid;
+      grid-template-columns: 145px minmax(180px, 1fr) 215px;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .ms-grade-badge-clean {
+      width: 126px;
+      height: 126px;
+      margin: 0 auto;
+      border-radius: 50%;
+      background: #fff;
+      border: 6px solid #173865;
+      outline: 3px solid #e0a726;
+      outline-offset: -12px;
+      box-shadow: 0 8px 18px rgba(0,0,0,.13);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #173865;
+    }
+    .grade-label {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .7rem;
+      font-weight: 800;
+      letter-spacing: .08em;
+    }
+    .grade-letter {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 2.7rem;
+      line-height: 1;
+      font-weight: 800;
+    }
+    .grade-stars {
+      color: #e0a726;
+      font-size: .62rem;
+      letter-spacing: .1em;
+    }
+
+    .ms-remarks-clean {
+      border: 1px solid #adb8c5;
+      border-radius: 11px;
+      padding: 13px 16px;
+      min-height: 122px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+      background: #fff;
+    }
+    .remarks-title {
+      color: #173865;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .98rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .remarks-rule {
+      width: 145px;
+      height: 1px;
+      background: #c6922d;
+      margin: 7px auto 9px;
+    }
+    .remarks-text {
+      color: #26364e;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .86rem;
       line-height: 1.5;
     }
-    .marksheet-signoff { display: none; }
-    .ms-email-note {
-      margin-top: 12px;
+
+    .ms-signature-clean {
       text-align: center;
+      min-width: 0;
+    }
+    .signature-svg {
+      width: 100%;
+      max-width: 208px;
+      height: 58px;
+      display: block;
+      margin: 0 auto 1px;
+    }
+    .signature-label {
+      color: #173865;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 800;
+      font-size: .82rem;
+      margin-bottom: 10px;
+    }
+    .date-label {
+      color: #536176;
       font-family: var(--font-mono);
-      font-size: .72rem;
-      color: #6b7280;
+      font-size: .6rem;
+      margin-bottom: 3px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    #final-res-date {
+      display: block;
+      color: #173865;
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 800;
+      font-size: .88rem;
+    }
+
+    .ms-footer-line {
+      margin-top: 19px;
+      padding-top: 13px;
+      border-top: 1px solid #ccd4de;
+      text-align: center;
+      color: #173865;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: .83rem;
+      font-style: italic;
+    }
+    .ms-extra-row {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      color: #657085;
+      font-family: var(--font-mono);
+      font-size: .62rem;
+    }
+    .ms-extra-row strong { color: #173865; }
+
+    @media (max-width: 900px) {
+      .reference-inner { padding: 44px 24px 22px; }
+      .ms-student-panel { grid-template-columns: 1fr 124px; }
+      .ms-photo-box { width: 112px; height: 138px; }
+      .ms-bottom-grid { grid-template-columns: 1fr 1.4fr; }
+      .ms-signature-clean { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 640px) {
+      .reference-inner { padding: 38px 12px 18px; }
+      .ms-crest-wrap {
+        transform: scale(.8);
+        transform-origin: center top;
+        height: 138px;
+        margin-bottom: -9px;
+      }
+      .ms-big-title { font-size: 1.85rem; }
+      .ms-ribbon-clean { width: 88%; }
+      .ms-student-panel { grid-template-columns: 1fr; }
+      .ms-photo-box { justify-self: center; }
+      .ms-detail-row {
+        grid-template-columns: 24px minmax(90px,1fr) 12px minmax(0,1.3fr);
+        font-size: .76rem;
+      }
+      .reference-ms-table tbody td {
+        padding: 8px 6px;
+        font-size: .7rem;
+      }
+      .row-icon {
+        width: 26px;
+        height: 26px;
+        margin-right: 4px;
+      }
+      .ms-bottom-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .ms-grade-badge-clean {
+        width: 108px;
+        height: 108px;
+      }
     }
 
     /* Review mode is read-only and uses the same exam layout. */
@@ -1346,41 +1309,191 @@
                 aria-label="Close marksheet"
                 onclick="closeMarksheet()">X</button>
 
-        <div class="final-marksheet">
-          <div class="marksheet-header">
-            <div class="marksheet-kicker">OFFICIAL RESULT</div>
-            <h2>Python Test Marksheet</h2>
+        <div class="reference-marksheet">
+          <div class="reference-inner">
+
+            <div class="ms-crest-wrap" aria-hidden="true">
+              <svg class="ms-crest-svg" viewBox="0 0 180 210">
+                <path d="M90 8 L156 30 L156 102 C156 146 128 176 90 194 C52 176 24 146 24 102 L24 30 Z"
+                      fill="#102c59" stroke="#d6a83f" stroke-width="6"/>
+                <path d="M90 24 L142 41 L142 101 C142 134 120 158 90 174 C60 158 38 134 38 101 L38 41 Z"
+                      fill="#173865"/>
+                <path d="M62 78 L90 63 L118 78 L118 119 L90 105 L62 119 Z"
+                      fill="#fff"/>
+                <path d="M78 91 L102 91 L102 132 L78 132 Z" fill="#fff"/>
+                <path d="M81 70 L99 70 L99 83 L81 83 Z" fill="#e0ab3e"/>
+                <path d="M62 58 L70 45 L78 58 L70 64 Z" fill="#f4c548"/>
+                <path d="M90 52 L98 36 L106 52 L98 58 Z" fill="#f4c548"/>
+                <path d="M118 58 L126 45 L134 58 L126 64 Z" fill="#f4c548"/>
+              </svg>
+
+              <svg class="ms-laurel left" viewBox="0 0 90 170">
+                <path d="M72 160 C32 118 23 75 50 18" fill="none" stroke="#c6922d" stroke-width="4"/>
+                <path d="M53 42 C38 42 27 34 23 24 C37 24 47 29 53 42Z" fill="#c6922d"/>
+                <path d="M45 62 C28 63 17 55 12 44 C28 44 39 50 45 62Z" fill="#c6922d"/>
+                <path d="M39 83 C23 86 12 79 8 68 C23 67 34 72 39 83Z" fill="#c6922d"/>
+                <path d="M38 104 C23 109 11 103 6 92 C21 90 32 94 38 104Z" fill="#c6922d"/>
+                <path d="M43 125 C28 131 15 126 10 115 C24 113 36 117 43 125Z" fill="#c6922d"/>
+              </svg>
+
+              <svg class="ms-laurel right" viewBox="0 0 90 170">
+                <path d="M18 160 C58 118 67 75 40 18" fill="none" stroke="#c6922d" stroke-width="4"/>
+                <path d="M37 42 C52 42 63 34 67 24 C53 24 43 29 37 42Z" fill="#c6922d"/>
+                <path d="M45 62 C62 63 73 55 78 44 C62 44 51 50 45 62Z" fill="#c6922d"/>
+                <path d="M51 83 C67 86 78 79 82 68 C67 67 56 72 51 83Z" fill="#c6922d"/>
+                <path d="M52 104 C67 109 79 103 84 92 C69 90 58 94 52 104Z" fill="#c6922d"/>
+                <path d="M47 125 C62 131 75 126 80 115 C66 113 54 117 47 125Z" fill="#c6922d"/>
+              </svg>
+            </div>
+
+            <div class="ms-big-title">TEST COMPLETED</div>
+
+            <div class="ms-title-rule">
+              <span></span><i></i><span></span>
+            </div>
+
+            <div class="ms-ribbon-clean">
+              <span class="star-mark">★</span>
+              <b>MARKSHEET</b>
+              <span class="star-mark">★</span>
+            </div>
+
+            <div class="ms-student-panel">
+              <div class="ms-student-details">
+                <div class="ms-detail-row">
+                  <span class="ms-detail-icon">
+                    <svg viewBox="0 0 24 24">
+                      <circle cx="12" cy="8" r="4" fill="currentColor"/>
+                      <path d="M4 21c.8-4.4 3.5-6.8 8-6.8s7.2 2.4 8 6.8" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span class="ms-detail-label">Student Name</span>
+                  <span class="ms-detail-colon">:</span>
+                  <strong id="final-res-name"></strong>
+                </div>
+
+                <div class="ms-detail-row">
+                  <span class="ms-detail-icon">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M7.2 3.8c.5-.5 1.4-.4 1.8.2l2 2.9c.4.6.3 1.3-.2 1.8l-1.3 1.1c1 2.1 2.7 3.8 4.8 4.8l1.1-1.3c.5-.5 1.2-.6 1.8-.2l2.9 2c.6.4.7 1.3.2 1.8l-1.6 1.9c-.5.6-1.4.8-2.1.5C11.5 19.2 4.8 12.5 2.7 5.4c-.2-.7 0-1.6.5-2.1l2-1.5Z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span class="ms-detail-label">Mobile Number</span>
+                  <span class="ms-detail-colon">:</span>
+                  <strong id="final-res-mobile"></strong>
+                </div>
+
+                <div class="ms-detail-row">
+                  <span class="ms-detail-icon">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M3 5h18v14H3z" fill="none" stroke="currentColor" stroke-width="2"/>
+                      <path d="M4 6l8 6 8-6" fill="none" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                  </span>
+                  <span class="ms-detail-label">Email</span>
+                  <span class="ms-detail-colon">:</span>
+                  <strong id="final-res-email"></strong>
+                </div>
+              </div>
+
+              <div class="ms-photo-box">
+                <img id="final-res-photo" alt="Student photo">
+              </div>
+            </div>
+
+            <table class="reference-ms-table">
+              <thead>
+                <tr>
+                  <th>PARTICULARS</th>
+                  <th>DETAILS</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="row-icon slate">▣</span>Total Questions</td>
+                  <td id="final-res-total"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon green">✓</span>Correct Answers</td>
+                  <td id="final-res-correct" class="ms-good"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon red">×</span>Incorrect Answers</td>
+                  <td id="final-res-incorrect" class="ms-bad"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon gold">★</span>MCQ Score</td>
+                  <td id="final-res-mcq-score"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon blue">%</span>Percentage</td>
+                  <td id="final-res-percentage"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon blue">Σ</span>Theory Questions</td>
+                  <td id="final-res-theory-count"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon purple">AI</span>Theory Marks (AI-evaluated)</td>
+                  <td id="final-res-theory-score"></td>
+                </tr>
+                <tr class="score-row">
+                  <td><span class="row-icon gold">★</span>TOTAL SCORE</td>
+                  <td id="final-res-score"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon blue">%</span>Percentage</td>
+                  <td id="final-res-percentage"></td>
+                </tr>
+                <tr>
+                  <td><span class="row-icon slate">T</span>Time Taken</td>
+                  <td id="final-res-time"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="ms-bottom-grid">
+              <div class="ms-grade-badge-clean">
+                <div class="grade-label">GRADE</div>
+                <div class="grade-letter" id="final-res-grade"></div>
+                <div class="grade-stars">★★★</div>
+              </div>
+
+              <div class="ms-remarks-clean">
+                <div class="remarks-title">REMARKS</div>
+                <div class="remarks-rule"></div>
+                <div class="remarks-text" id="final-res-remarks"></div>
+              </div>
+
+              <div class="ms-signature-clean">
+                <svg viewBox="0 0 260 80" class="signature-svg" aria-hidden="true">
+                  <path d="M8 52 C22 46,26 27,38 27 C47 27,39 53,52 52
+                           C67 51,71 29,80 30 C88 31,81 50,92 51
+                           C105 52,111 29,120 28 C130 27,124 50,135 51
+                           C146 52,161 40,176 39 C191 38,195 44,210 38
+                           C221 34,231 38,247 34"
+                        fill="none" stroke="#1f7a4d" stroke-width="4"
+                        stroke-linecap="round"/>
+                  <path d="M167 55 C191 54,218 53,252 53"
+                        fill="none" stroke="#173865" stroke-width="2"/>
+                </svg>
+                <div class="signature-label">Authorized Signature</div>
+                <div class="date-label">Date of Completion</div>
+                <strong id="final-res-date"></strong>
+              </div>
+            </div>
+
+            <div class="ms-footer-line">
+              ★ &nbsp;Believe in yourself. Keep learning and keep growing!&nbsp; ★
+            </div>
+<div id="final-ms-pending"
+                 class="marksheet-pending-note"
+                 style="display:none;">
+              AI correction is still pending.
+            </div>
+
+            <div class="ms-email-note" id="ms-email-note"></div>
           </div>
-
-          <table class="final-ms-table">
-            <tbody>
-              <tr><th>Student Name</th><td id="final-res-name"></td></tr>
-              <tr><th>Mobile Number</th><td id="final-res-mobile"></td></tr>
-              <tr><th>Email</th><td id="final-res-email"></td></tr>
-              <tr><th>Total Questions</th><td id="final-res-total"></td></tr>
-              <tr><th>Correct Answers</th><td id="final-res-correct" class="ms-good"></td></tr>
-              <tr><th>Incorrect Answers</th><td id="final-res-incorrect" class="ms-bad"></td></tr>
-              <tr><th>MCQ Score</th><td id="final-res-mcq-score"></td></tr>
-              <tr><th>Theory Questions</th><td id="final-res-theory-count"></td></tr>
-              <tr><th>Theory Marks</th><td id="final-res-theory-score"></td></tr>
-              <tr class="ms-highlight-row"><th>Total Score</th><td id="final-res-score"></td></tr>
-              <tr class="ms-highlight-row"><th>Percentage</th><td id="final-res-percentage"></td></tr>
-              <tr><th>Grade</th><td id="final-res-grade"></td></tr>
-              <tr><th>Remarks</th><td id="final-res-remarks"></td></tr>
-              <tr><th>Time Taken</th><td id="final-res-time"></td></tr>
-              <tr><th>Result ID</th><td id="final-res-jobid"></td></tr>
-              <tr><th>Date</th><td id="final-res-date"></td></tr>
-            </tbody>
-          </table>
-
-          <div id="final-ms-pending"
-               class="marksheet-pending-note"
-               style="display:none;">
-            AI correction is still pending.
-          </div>
-
-          <div class="ms-email-note"
-               id="ms-email-note"></div>
         </div>
       </div>
 
@@ -3194,6 +3307,17 @@ function startCameraMonitoring() {
 
     // Populate full marksheet copy.
     set('final-res-name', result.name);
+    const finalPhoto = document.getElementById('final-res-photo');
+    if (finalPhoto) {
+      const photo = studentData.imageRaw || result.image || '';
+      if (photo) {
+        finalPhoto.src = photo;
+        finalPhoto.style.display = 'block';
+      } else {
+        finalPhoto.removeAttribute('src');
+        finalPhoto.style.display = 'none';
+      }
+    }
     set('final-res-mobile', result.mobile);
     set('final-res-email', result.email || studentData.email || '—');
     set('final-res-total', result.totalQuestions);
